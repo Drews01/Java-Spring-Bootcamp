@@ -332,6 +332,92 @@ try {
 
 ---
 
+## Product Page Authentication
+
+The product page endpoints are secured using Spring Security. The `SecurityConfig` class defines the security rules for the application. By default, all endpoints, including `/products`, require authentication unless explicitly permitted.
+
+### How It Works
+1. **Security Configuration**: The `SecurityConfig` class uses the `SecurityFilterChain` bean to configure HTTP security. The line `.anyRequest().authenticated()` ensures that all endpoints, including `/products`, require authentication.
+2. **JWT Authentication**: The `JwtAuthFilter` is added to the security filter chain to validate JWT tokens for incoming requests. If the token is valid, the user is authenticated.
+3. **Controller Layer**: The `ProductController` handles requests to `/products`. Since the security configuration requires authentication for all endpoints, users must provide a valid JWT token to access these endpoints.
+
+### How to Remove Authentication for the Product Page
+To make the product page publicly accessible, modify the `SecurityConfig` class:
+
+1. Locate the `SecurityConfig` class in `src/main/java/com/example/demo/config/SecurityConfig.java`.
+2. Update the `authorizeHttpRequests` method to permit access to `/products`:
+
+   ```java
+   .authorizeHttpRequests(auth -> auth
+           .requestMatchers("/auth/**").permitAll()
+           .requestMatchers("/error").permitAll()
+           .requestMatchers("/products/**").permitAll() // Allow public access to products
+           .anyRequest().authenticated()
+   )
+   ```
+
+3. Save the changes and restart the application. The product page will no longer require authentication.
+
+---
+
+## Adding Another Page to Authentication
+
+To secure additional pages with authentication, you need to update the `SecurityConfig` class to include the new endpoint in the security rules.
+
+### Steps to Add Authentication for a New Page
+
+1. **Define the New Endpoint**:
+   - Create a new controller or add a new method in an existing controller to handle the new page.
+   - For example, if you want to add a `/dashboard` page, define it in a controller:
+
+     ```java
+     @RestController
+     @RequestMapping("/dashboard")
+     public class DashboardController {
+         @GetMapping
+         public ResponseEntity<String> getDashboard() {
+             return ResponseEntity.ok("Welcome to the Dashboard");
+         }
+     }
+     ```
+
+2. **Update the Security Configuration**:
+   - Open the `SecurityConfig` class located at `src/main/java/com/example/demo/config/SecurityConfig.java`.
+   - Ensure the new endpoint is not explicitly permitted in the `authorizeHttpRequests` method. By default, `.anyRequest().authenticated()` will secure all endpoints unless explicitly allowed.
+
+3. **Test the Authentication**:
+   - Restart the application.
+   - Access the new page (e.g., `/dashboard`) in your browser or API client.
+   - Ensure that a valid JWT token is required to access the page.
+
+### Example Security Configuration
+
+If you want to explicitly secure the `/dashboard` endpoint while keeping other endpoints unchanged, you can modify the `SecurityConfig` as follows:
+
+```java
+.authorizeHttpRequests(auth -> auth
+        .requestMatchers("/auth/**").permitAll()
+        .requestMatchers("/error").permitAll()
+        .requestMatchers("/products/**").authenticated() // Ensure products require authentication
+        .requestMatchers("/dashboard/**").authenticated() // Add authentication for dashboard
+        .anyRequest().authenticated()
+)
+```
+
+### Notes
+- Ensure the new page is properly tested to verify that authentication is enforced.
+- If you want to allow specific roles or permissions for the new page, you can use `@PreAuthorize` annotations in the controller methods. For example:
+
+  ```java
+  @PreAuthorize("hasRole('ADMIN')")
+  @GetMapping
+  public ResponseEntity<String> getDashboard() {
+      return ResponseEntity.ok("Admin Dashboard");
+  }
+  ```
+
+---
+
 ## Files Created
 
 1. `JwtService.java` - JWT token management
@@ -348,3 +434,86 @@ try {
 The JWT authentication system is now fully implemented and ready for testing. All components follow enterprise-grade best practices with proper security, validation, and error handling.
 
 **Remember to restart the application before testing!**
+
+## Step-by-Step Guide to Building Authentication
+
+To build a complete authentication system in a Spring Boot application, follow these steps:
+
+### 1. Create the Security Configuration
+- **File**: `src/main/java/com/example/demo/config/SecurityConfig.java`
+- **Purpose**: Configure Spring Security to handle authentication and authorization.
+- **Steps**:
+  1. Annotate the class with `@Configuration`, `@EnableWebSecurity`, and `@EnableMethodSecurity`.
+  2. Define a `SecurityFilterChain` bean to configure HTTP security.
+  3. Add a JWT filter to the security filter chain.
+  4. Disable CSRF and configure stateless session management.
+
+### 2. Implement JWT Token Management
+- **File**: `src/main/java/com/example/demo/security/JwtService.java`
+- **Purpose**: Handle JWT token generation, validation, and extraction.
+- **Steps**:
+  1. Use the `io.jsonwebtoken` library to create and parse JWT tokens.
+  2. Define methods to generate tokens, validate tokens, and extract claims.
+  3. Store the secret key in `application.yml`.
+
+### 3. Create a JWT Authentication Filter
+- **File**: `src/main/java/com/example/demo/security/JwtAuthFilter.java`
+- **Purpose**: Intercept HTTP requests to validate JWT tokens.
+- **Steps**:
+  1. Extend `OncePerRequestFilter`.
+  2. Extract the token from the `Authorization` header.
+  3. Validate the token and set the authentication in the `SecurityContext`.
+
+### 4. Implement User Details Service
+- **File**: `src/main/java/com/example/demo/security/CustomUserDetailsService.java`
+- **Purpose**: Load user details from the database for authentication.
+- **Steps**:
+  1. Implement `UserDetailsService`.
+  2. Fetch the user from the database using the `UserRepository`.
+  3. Map the user entity to Spring Security's `UserDetails`.
+
+### 5. Define User Entity and Repository
+- **File**: `src/main/java/com/example/demo/entity/User.java`
+- **Purpose**: Represent the user in the database.
+- **Steps**:
+  1. Annotate the class with `@Entity`.
+  2. Define fields for username, email, password, and roles.
+  3. Use `@JsonIgnore` to hide the password in API responses.
+
+- **File**: `src/main/java/com/example/demo/repository/UserRepository.java`
+- **Purpose**: Provide database access for user-related operations.
+- **Steps**:
+  1. Extend `JpaRepository`.
+  2. Define methods to find users by username or email.
+
+### 6. Create Authentication Service
+- **File**: `src/main/java/com/example/demo/service/AuthService.java`
+- **Purpose**: Handle business logic for authentication and registration.
+- **Steps**:
+  1. Implement methods for user registration and login.
+  2. Hash passwords using `BCryptPasswordEncoder`.
+  3. Generate JWT tokens upon successful login.
+
+### 7. Build Authentication Controller
+- **File**: `src/main/java/com/example/demo/controller/AuthController.java`
+- **Purpose**: Expose REST endpoints for authentication.
+- **Steps**:
+  1. Define endpoints for `/auth/register` and `/auth/login`.
+  2. Use `@Valid` to validate request bodies.
+  3. Return JWT tokens in the response.
+
+### 8. Configure Application Properties
+- **File**: `src/main/resources/application.yml`
+- **Purpose**: Store configuration values for JWT and security.
+- **Steps**:
+  1. Add properties for the JWT secret and expiration time.
+  2. Configure database connection settings.
+
+### 9. Test the Authentication System
+- **Steps**:
+  1. Use tools like Postman or cURL to test the `/auth/register` and `/auth/login` endpoints.
+  2. Verify that protected endpoints require a valid JWT token.
+  3. Test edge cases like invalid tokens, expired tokens, and duplicate registrations.
+
+### Summary
+By following these steps, you can build a robust authentication system for your Spring Boot application. Each component plays a critical role in ensuring security and functionality.
