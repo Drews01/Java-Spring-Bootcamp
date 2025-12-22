@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  # Redis Server
+  redis:
+    image: redis:7-alpine
+    container_name: redis-server
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+    networks:
+      - redis-network
+
+  # Redis Insight - Web-based Redis GUI
+  redis-insight:
+    image: redis/redisinsight:latest
+    container_name: redis-insight
+    ports:
+      - "5540:5540"
+    volumes:
+      - redis_insight_data:/data
+    restart: unless-stopped
+    depends_on:
+      - redis
+    networks:
+      - redis-network
+
+volumes:
+  redis_data:
+    driver: local
+  redis_insight_data:
+    driver: local
+
+networks:
+  redis-network:
+    driver: bridge
