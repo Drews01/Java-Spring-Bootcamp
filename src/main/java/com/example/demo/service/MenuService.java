@@ -1,0 +1,65 @@
+package com.example.demo.service;
+
+import com.example.demo.dto.MenuDTO;
+import com.example.demo.entity.Menu;
+import com.example.demo.repository.MenuRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+public class MenuService {
+
+    private final MenuRepository menuRepository;
+
+    @Transactional
+    public MenuDTO createMenu(MenuDTO dto) {
+        Menu menu = Menu.builder()
+                .name(dto.getName())
+                .build();
+
+        Menu saved = menuRepository.save(menu);
+        return convertToDTO(saved);
+    }
+
+    @Transactional(readOnly = true)
+    public MenuDTO getMenu(Long menuId) {
+        Menu menu = menuRepository.findById(menuId)
+                .orElseThrow(() -> new RuntimeException("Menu not found with id: " + menuId));
+        return convertToDTO(menu);
+    }
+
+    @Transactional(readOnly = true)
+    public List<MenuDTO> getAllMenus() {
+        return menuRepository.findAll().stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public MenuDTO updateMenu(Long menuId, MenuDTO dto) {
+        Menu menu = menuRepository.findById(menuId)
+                .orElseThrow(() -> new RuntimeException("Menu not found with id: " + menuId));
+
+        menu.setName(dto.getName());
+
+        Menu updated = menuRepository.save(menu);
+        return convertToDTO(updated);
+    }
+
+    @Transactional
+    public void deleteMenu(Long menuId) {
+        menuRepository.deleteById(menuId);
+    }
+
+    private MenuDTO convertToDTO(Menu menu) {
+        return MenuDTO.builder()
+                .menuId(menu.getMenuId())
+                .name(menu.getName())
+                .build();
+    }
+}
