@@ -1,6 +1,7 @@
 package com.example.demo.controller;
 
 import com.example.demo.base.ApiResponse;
+import com.example.demo.base.ResponseUtil;
 import com.example.demo.dto.LoanActionRequest;
 import com.example.demo.dto.LoanApplicationDTO;
 import com.example.demo.dto.LoanQueueItemDTO;
@@ -14,7 +15,6 @@ import com.example.demo.repository.UserRepository;
 import com.example.demo.security.CustomUserDetails;
 import com.example.demo.service.LoanWorkflowService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -37,15 +37,14 @@ public class LoanWorkflowController {
     @PostMapping("/submit")
     public ResponseEntity<ApiResponse<LoanApplicationDTO>> submitLoan(@RequestBody LoanSubmitRequest request) {
         LoanApplicationDTO created = loanWorkflowService.submitLoan(request);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success(created, "Loan application submitted successfully"));
+        return ResponseUtil.created(created, "Loan application submitted successfully");
     }
 
     @PostMapping("/action")
     public ResponseEntity<ApiResponse<LoanApplicationDTO>> performAction(@RequestBody LoanActionRequest request) {
         Long actorUserId = getCurrentUserId();
         LoanApplicationDTO updated = loanWorkflowService.performAction(request, actorUserId);
-        return ResponseEntity.ok(ApiResponse.success(updated, "Action performed successfully"));
+        return ResponseUtil.ok(updated, "Action performed successfully");
     }
 
     @GetMapping("/queue/marketing")
@@ -55,7 +54,7 @@ public class LoanWorkflowController {
                 LoanStatus.SUBMITTED.name(),
                 LoanStatus.IN_REVIEW.name());
         List<LoanQueueItemDTO> queue = getQueueItems(statuses);
-        return ResponseEntity.ok(ApiResponse.success(queue, "Marketing queue retrieved successfully"));
+        return ResponseUtil.ok(queue, "Marketing queue retrieved successfully");
     }
 
     @GetMapping("/queue/branch-manager")
@@ -63,7 +62,7 @@ public class LoanWorkflowController {
     public ResponseEntity<ApiResponse<List<LoanQueueItemDTO>>> getBranchManagerQueue() {
         List<String> statuses = Arrays.asList(LoanStatus.WAITING_APPROVAL.name());
         List<LoanQueueItemDTO> queue = getQueueItems(statuses);
-        return ResponseEntity.ok(ApiResponse.success(queue, "Branch manager queue retrieved successfully"));
+        return ResponseUtil.ok(queue, "Branch manager queue retrieved successfully");
     }
 
     @GetMapping("/queue/back-office")
@@ -71,7 +70,7 @@ public class LoanWorkflowController {
     public ResponseEntity<ApiResponse<List<LoanQueueItemDTO>>> getBackOfficeQueue() {
         List<String> statuses = Arrays.asList(LoanStatus.APPROVED_WAITING_DISBURSEMENT.name());
         List<LoanQueueItemDTO> queue = getQueueItems(statuses);
-        return ResponseEntity.ok(ApiResponse.success(queue, "Back office queue retrieved successfully"));
+        return ResponseUtil.ok(queue, "Back office queue retrieved successfully");
     }
 
     @GetMapping("/{loanId}/allowed-actions")
@@ -84,7 +83,7 @@ public class LoanWorkflowController {
                 loanApplication.getCurrentStatus(),
                 userRoles);
 
-        return ResponseEntity.ok(ApiResponse.success(allowedActions, "Allowed actions retrieved successfully"));
+        return ResponseUtil.ok(allowedActions, "Allowed actions retrieved successfully");
     }
 
     private List<LoanQueueItemDTO> getQueueItems(List<String> statuses) {

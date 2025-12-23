@@ -1,10 +1,10 @@
 package com.example.demo.controller;
 
 import com.example.demo.base.ApiResponse;
+import com.example.demo.base.ResponseUtil;
 import com.example.demo.dto.MenuDTO;
 import com.example.demo.service.MenuService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,20 +20,19 @@ public class MenuController {
     @PostMapping
     public ResponseEntity<ApiResponse<MenuDTO>> createMenu(@RequestBody MenuDTO dto) {
         MenuDTO created = menuService.createMenu(dto);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success(created, "Menu created successfully"));
+        return ResponseUtil.created(created, "Menu created successfully");
     }
 
     @GetMapping("/{menuId}")
     public ResponseEntity<ApiResponse<MenuDTO>> getMenu(@PathVariable Long menuId) {
         MenuDTO menu = menuService.getMenu(menuId);
-        return ResponseEntity.ok(ApiResponse.success(menu, "Menu retrieved successfully"));
+        return ResponseUtil.ok(menu, "Menu retrieved successfully");
     }
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<MenuDTO>>> getAllMenus() {
         List<MenuDTO> menus = menuService.getAllMenus();
-        return ResponseEntity.ok(ApiResponse.success(menus, "Menus retrieved successfully"));
+        return ResponseUtil.ok(menus, "Menus retrieved successfully");
     }
 
     @PutMapping("/{menuId}")
@@ -41,12 +40,12 @@ public class MenuController {
             @PathVariable Long menuId,
             @RequestBody MenuDTO dto) {
         MenuDTO updated = menuService.updateMenu(menuId, dto);
-        return ResponseEntity.ok(ApiResponse.success(updated, "Menu updated successfully"));
+        return ResponseUtil.ok(updated, "Menu updated successfully");
     }
 
     @DeleteMapping("/{menuId}")
     public ResponseEntity<ApiResponse<Void>> deleteMenu(@PathVariable Long menuId) {
         menuService.deleteMenu(menuId);
-        return ResponseEntity.ok(ApiResponse.success(null, "Menu deleted successfully"));
+        return ResponseUtil.okMessage("Menu deleted successfully");
     }
 }

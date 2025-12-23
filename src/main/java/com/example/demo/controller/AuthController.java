@@ -1,18 +1,20 @@
 package com.example.demo.controller;
 
-import com.example.demo.base.ApiResponse;
-import com.example.demo.dto.AuthRequest;
-import com.example.demo.dto.AuthResponse;
-import com.example.demo.dto.RegisterRequest;
-import com.example.demo.service.AuthService;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.example.demo.base.ApiResponse;
+import com.example.demo.base.ResponseUtil;
+import com.example.demo.dto.AuthRequest;
+import com.example.demo.dto.AuthResponse;
+import com.example.demo.dto.RegisterRequest;
+import com.example.demo.service.AuthService;
+
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Authentication Controller
@@ -32,10 +34,7 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<AuthResponse>> register(@Valid @RequestBody RegisterRequest request) {
         AuthResponse authResponse = authService.register(request);
-        ApiResponse<AuthResponse> response = ApiResponse.created(
-                authResponse,
-                "User registered successfully");
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        return ResponseUtil.created(authResponse, "User registered successfully");
     }
 
     /**
@@ -45,9 +44,6 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody AuthRequest request) {
         AuthResponse authResponse = authService.login(request);
-        ApiResponse<AuthResponse> response = ApiResponse.success(
-                authResponse,
-                "Login successful");
-        return ResponseEntity.ok(response);
+        return ResponseUtil.ok(authResponse, "Login successful");
     }
 }

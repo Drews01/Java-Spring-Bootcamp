@@ -9,11 +9,11 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.http.HttpStatus;
 import java.util.List;
 import com.example.demo.entity.Product;
 import com.example.demo.service.ProductService;
 import com.example.demo.base.ApiResponse;
+import com.example.demo.base.ResponseUtil;
 
 @RestController
 @RequestMapping("/products")
@@ -27,37 +27,25 @@ public class ProductController {
     @PostMapping
     public ResponseEntity<ApiResponse<Product>> createProduct(@RequestBody Product product) {
         Product createdProduct = productService.createProduct(product);
-        ApiResponse<Product> response = ApiResponse.created(
-                createdProduct,
-                "Product created successfully");
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        return ResponseUtil.created(createdProduct, "Product created successfully");
     }
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<Product>>> getAllProducts() {
         List<Product> products = productService.getAllProducts();
-        ApiResponse<List<Product>> response = ApiResponse.success(
-                products,
-                "Products retrieved successfully");
-        return ResponseEntity.ok(response);
+        return ResponseUtil.ok(products, "Products retrieved successfully");
     }
 
     @GetMapping("/active")
     public ResponseEntity<ApiResponse<List<Product>>> getActiveProducts() {
         List<Product> products = productService.getActiveProducts();
-        ApiResponse<List<Product>> response = ApiResponse.success(
-                products,
-                "Active products retrieved successfully");
-        return ResponseEntity.ok(response);
+        return ResponseUtil.ok(products, "Active products retrieved successfully");
     }
 
     @GetMapping("/code/{code}")
     public ResponseEntity<ApiResponse<Product>> getProductByCode(@PathVariable String code) {
         Product product = productService.getProductByCode(code);
-        ApiResponse<Product> response = ApiResponse.success(
-                product,
-                "Product retrieved successfully");
-        return ResponseEntity.ok(response);
+        return ResponseUtil.ok(product, "Product retrieved successfully");
     }
 
     @PatchMapping("/{id}/status")
@@ -65,9 +53,6 @@ public class ProductController {
             @PathVariable Long id,
             @RequestParam Boolean isActive) {
         Product updatedProduct = productService.updateProductStatus(id, isActive);
-        ApiResponse<Product> response = ApiResponse.success(
-                updatedProduct,
-                "Product status updated successfully");
-        return ResponseEntity.ok(response);
+        return ResponseUtil.ok(updatedProduct, "Product status updated successfully");
     }
 }
