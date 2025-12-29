@@ -16,6 +16,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @Component
@@ -31,6 +32,8 @@ public class DataInitializer implements CommandLineRunner {
 
         @Override
         public void run(String... args) throws Exception {
+                cleanupDuplicateRoles();
+
                 Role adminRole = findOrCreateRole("ADMIN");
                 Role userRole = findOrCreateRole("USER");
                 Role backOfficeRole = findOrCreateRole("BACK_OFFICE");
@@ -194,6 +197,45 @@ public class DataInitializer implements CommandLineRunner {
                                         .menuId(menu.getMenuId())
                                         .build());
                 }
+        }
+
+        private void cleanupDuplicateRoles() {
+                mergeRoleIfExists("BACK OFFICE", "BACK_OFFICE");
+                mergeRoleIfExists("BRANCH MANAGER", "BRANCH_MANAGER");
+        }
+
+        private void mergeRoleIfExists(String oldName, String newName) {
+                roleRepository.findByName(oldName).ifPresent(oldRole -> {
+                        Role newRole = findOrCreateRole(newName);
+
+                        // 1. Reassign users
+                        List<User> usersWithOldRole = userRepository.findByRoles_Name(oldName);
+                        for (User user : usersWithOldRole) {
+                                user.getRoles().remove(oldRole);
+                                user.getRoles().add(newRole);
+                                userRepository.save(user);
+                        }
+
+                        // 2. Reassign menu mappings
+                        List<RoleMenu> mappingsWithOldRole = roleMenuRepository.findByRoleId(oldRole.getId());
+                        for (RoleMenu mapping : mappingsWithOldRole) {
+                                if (!roleMenuRepository.existsById(
+                                                new com.example.demo.entity.RoleMenuId(newRole.getId(),
+                                                                mapping.getMenuId()))) {
+                                        roleMenuRepository.save(RoleMenu.builder()
+                                                        .roleId(newRole.getId())
+                                                        .menuId(mapping.getMenuId())
+                                                        .isActive(mapping.getIsActive())
+                                                        .deleted(mapping.getDeleted())
+                                                        .build());
+                                }
+                                roleMenuRepository.delete(mapping);
+                        }
+
+                        // 3. Delete old role (hard delete since it's a cleanup of duplicates)
+                        roleRepository.delete(oldRole);
+                        System.out.println("✓ Merged and removed duplicate role: " + oldName + " -> " + newName);
+                });
         }
 
         private void createTestUser(String username, String email, String password, Role... roles) {
