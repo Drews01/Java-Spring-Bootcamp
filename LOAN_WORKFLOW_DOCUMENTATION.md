@@ -6,10 +6,15 @@ This document explains how the Loan Approval Workflow works and how to test it.
 
 The system uses a state machine to manage loan applications. Each status belongs to a specific "Queue" which is accessible only by specific roles.
 
-### Roles & Queues
-*   **MARKETING**: Accesses the **Marketing Queue** (`SUBMITTED`, `IN_REVIEW`).
-*   **BRANCH_MANAGER**: Accesses the **Branch Manager Queue** (`WAITING_APPROVAL`).
-*   **BACK_OFFICE**: Accesses the **Back Office Queue** (`APPROVED_WAITING_DISBURSEMENT`).
+### Roles & Queues (Managed via RBAC)
+The system uses a dynamic Role-Based Access Control (RBAC) system. Each queue is mapped to a specific **Menu Permission**:
+
+*   **MARKETING**: Accesses the **Marketing Queue** via `LOAN_REVIEW` permission (`SUBMITTED`, `IN_REVIEW`).
+*   **BRANCH_MANAGER**: Accesses the **Branch Manager Queue** via `LOAN_APPROVE` permission (`WAITING_APPROVAL`).
+*   **BACK_OFFICE**: Accesses the **Back Office Queue** via `LOAN_DISBURSE` permission (`APPROVED_WAITING_DISBURSEMENT`).
+
+> [!NOTE]
+> Access is controlled by the `RoleMenu` table. If you want a role to have access to a queue, you must link that role to the corresponding Menu in the database.
 
 ### Status Transitions
 1.  **SUBMITTED**: Initial status after submission.

@@ -31,6 +31,7 @@ public class LoanWorkflowService {
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
     private final NotificationService notificationService;
+    private final AccessControlService accessControl;
 
     @Transactional
     public LoanApplicationDTO submitLoan(LoanSubmitRequest request) {
@@ -283,30 +284,37 @@ public class LoanWorkflowService {
         }
     }
 
-    public List<String> getAllowedActions(String currentStatus, List<String> userRoles) {
+    public List<String> getAllowedActions(String currentStatus, Long userId) {
         List<String> allowedActions = new ArrayList<>();
 
         switch (currentStatus) {
             case "SUBMITTED":
-            case "IN_REVIEW":
-                if (userRoles.contains("MARKETING")) {
+                if (accessControl.hasMenu("LOAN_REVIEW")) {
                     allowedActions.add(LoanAction.COMMENT.name());
-                    if ("IN_REVIEW".equals(currentStatus)) {
-                        allowedActions.add(LoanAction.FORWARD_TO_MANAGER.name());
-                    }
+                }
+                break;
+            case "IN_REVIEW":
+                if (accessControl.hasMenu("LOAN_REVIEW")) {
+                    allowedActions.add(LoanAction.COMMENT.name());
+                    allowedActions.add(LoanAction.FORWARD_TO_MANAGER.name());
                 }
                 break;
 
             case "WAITING_APPROVAL":
-                if (userRoles.contains("BRANCH_MANAGER")) {
+                if (accessControl.hasMenu("LOAN_APPROVE")) {
                     allowedActions.add(LoanAction.COMMENT.name());
                     allowedActions.add(LoanAction.APPROVE.name());
+                }
+                if (accessControl.hasMenu("LOAN_REJECT")) {
+                    if (!allowedActions.contains(LoanAction.COMMENT.name())) {
+                        allowedActions.add(LoanAction.COMMENT.name());
+                    }
                     allowedActions.add(LoanAction.REJECT.name());
                 }
                 break;
 
             case "APPROVED_WAITING_DISBURSEMENT":
-                if (userRoles.contains("BACK_OFFICE")) {
+                if (accessControl.hasMenu("LOAN_DISBURSE")) {
                     allowedActions.add(LoanAction.DISBURSE.name());
                 }
                 break;

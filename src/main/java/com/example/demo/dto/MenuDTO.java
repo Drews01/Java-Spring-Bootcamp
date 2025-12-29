@@ -11,5 +11,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class MenuDTO {
     private Long menuId;
+    private String code;
     private String name;
+    private String urlPattern;
 }

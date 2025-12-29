@@ -24,17 +24,26 @@ public class RoleMenuService {
     @Transactional
     public RoleMenu assignMenuToRole(Long roleId, Long menuId) {
         Role role = roleRepository.findById(roleId)
+                .filter(r -> r.getDeleted() == null || !r.getDeleted())
                 .orElseThrow(() -> new RuntimeException("Role not found with id: " + roleId));
 
         Menu menu = menuRepository.findById(menuId)
                 .orElseThrow(() -> new RuntimeException("Menu not found with id: " + menuId));
 
-        RoleMenu roleMenu = RoleMenu.builder()
-                .roleId(roleId)
-                .menuId(menuId)
-                .role(role)
-                .menu(menu)
-                .build();
+        RoleMenu roleMenu = roleMenuRepository.findById(new RoleMenuId(roleId, menuId))
+                .map(rm -> {
+                    rm.setDeleted(false);
+                    rm.setIsActive(true);
+                    return rm;
+                })
+                .orElseGet(() -> RoleMenu.builder()
+                        .roleId(roleId)
+                        .menuId(menuId)
+                        .role(role)
+                        .menu(menu)
+                        .deleted(false)
+                        .isActive(true)
+                        .build());
 
         return roleMenuRepository.save(roleMenu);
     }
@@ -52,6 +61,10 @@ public class RoleMenuService {
     @Transactional
     public void removeMenuFromRole(Long roleId, Long menuId) {
         RoleMenuId id = new RoleMenuId(roleId, menuId);
-        roleMenuRepository.deleteById(id);
+        RoleMenu roleMenu = roleMenuRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Mapping not found"));
+        roleMenu.setDeleted(true);
+        roleMenu.setIsActive(false);
+        roleMenuRepository.save(roleMenu);
     }
 }

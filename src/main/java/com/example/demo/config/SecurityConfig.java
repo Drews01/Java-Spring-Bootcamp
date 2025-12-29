@@ -15,6 +15,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import com.example.demo.security.JwtAuthFilter;
+import com.example.demo.security.DynamicAuthorizationManager;
 
 import lombok.RequiredArgsConstructor;
 
@@ -29,6 +30,7 @@ import lombok.RequiredArgsConstructor;
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
+    private final DynamicAuthorizationManager dynamicAuthorizationManager;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -37,7 +39,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/login", "/auth/register").permitAll() // Allow specific auth endpoints
                         .requestMatchers("/error").permitAll() // Allow error endpoint
-                        .anyRequest().authenticated() // Require authentication for all other endpoints
+                        .anyRequest().access(dynamicAuthorizationManager) // Use dynamic RBAC for everything else
                 )
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS) // No sessions

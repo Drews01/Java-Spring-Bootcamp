@@ -31,4 +31,22 @@ public class Role {
     @JsonIgnoreProperties("roles")
     @Builder.Default
     private Set<User> users = new HashSet<>();
+
+    @Column(name = "is_active")
+    @Builder.Default
+    private Boolean isActive = true;
+
+    @Column(name = "is_deleted")
+    @Builder.Default
+    private Boolean deleted = false;
+
+    @PrePersist
+    protected void onCreate() {
+        if (deleted == null) {
+            deleted = false;
+        }
+        if (isActive == null) {
+            isActive = true;
+        }
+    }
 }

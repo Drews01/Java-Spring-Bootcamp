@@ -30,4 +30,22 @@ public class RoleMenu {
     @ManyToOne
     @JoinColumn(name = "menu_id", insertable = false, updatable = false)
     private Menu menu;
+
+    @Column(name = "is_active")
+    @Builder.Default
+    private Boolean isActive = true;
+
+    @Column(name = "is_deleted")
+    @Builder.Default
+    private Boolean deleted = false;
+
+    @PrePersist
+    protected void onCreate() {
+        if (deleted == null) {
+            deleted = false;
+        }
+        if (isActive == null) {
+            isActive = true;
+        }
+    }
 }

@@ -19,7 +19,9 @@ public class MenuService {
     @Transactional
     public MenuDTO createMenu(MenuDTO dto) {
         Menu menu = Menu.builder()
+                .code(dto.getCode())
                 .name(dto.getName())
+                .urlPattern(dto.getUrlPattern())
                 .build();
 
         Menu saved = menuRepository.save(menu);
@@ -45,7 +47,9 @@ public class MenuService {
         Menu menu = menuRepository.findById(menuId)
                 .orElseThrow(() -> new RuntimeException("Menu not found with id: " + menuId));
 
+        menu.setCode(dto.getCode());
         menu.setName(dto.getName());
+        menu.setUrlPattern(dto.getUrlPattern());
 
         Menu updated = menuRepository.save(menu);
         return convertToDTO(updated);
@@ -59,7 +63,9 @@ public class MenuService {
     private MenuDTO convertToDTO(Menu menu) {
         return MenuDTO.builder()
                 .menuId(menu.getMenuId())
+                .code(menu.getCode())
                 .name(menu.getName())
+                .urlPattern(menu.getUrlPattern())
                 .build();
     }
 }

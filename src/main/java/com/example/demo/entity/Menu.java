@@ -19,6 +19,12 @@ public class Menu {
     @Column(name = "menu_id")
     private Long menuId;
 
+    @Column(nullable = false, length = 100, unique = true)
+    private String code;
+
     @Column(nullable = false, length = 100)
     private String name;
+
+    @Column(name = "url_pattern", length = 255)
+    private String urlPattern;
 }

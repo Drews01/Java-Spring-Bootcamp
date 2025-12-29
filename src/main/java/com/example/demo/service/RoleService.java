@@ -18,6 +18,15 @@ public class RoleService {
     }
 
     public List<Role> getAllRoles() {
-        return roleRepository.findAll();
+        return roleRepository.findByDeletedFalse();
+    }
+
+    public void deleteRole(Long id) {
+        Role role = roleRepository.findById(id)
+                .filter(r -> r.getDeleted() == null || !r.getDeleted())
+                .orElseThrow(() -> new RuntimeException("Role not found with id: " + id));
+        role.setDeleted(true);
+        role.setIsActive(false);
+        roleRepository.save(role);
     }
 }

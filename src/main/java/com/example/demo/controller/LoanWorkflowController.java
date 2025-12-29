@@ -7,7 +7,6 @@ import com.example.demo.dto.LoanApplicationDTO;
 import com.example.demo.dto.LoanQueueItemDTO;
 import com.example.demo.dto.LoanSubmitRequest;
 import com.example.demo.entity.LoanApplication;
-import com.example.demo.entity.Role;
 import com.example.demo.entity.User;
 import com.example.demo.enums.LoanStatus;
 import com.example.demo.repository.LoanApplicationRepository;
@@ -48,7 +47,7 @@ public class LoanWorkflowController {
     }
 
     @GetMapping("/queue/marketing")
-    @PreAuthorize("hasRole('MARKETING')")
+    @PreAuthorize("@accessControl.hasMenu('LOAN_REVIEW')")
     public ResponseEntity<ApiResponse<List<LoanQueueItemDTO>>> getMarketingQueue() {
         List<String> statuses = Arrays.asList(
                 LoanStatus.SUBMITTED.name(),
@@ -58,7 +57,7 @@ public class LoanWorkflowController {
     }
 
     @GetMapping("/queue/branch-manager")
-    @PreAuthorize("hasRole('BRANCH_MANAGER')")
+    @PreAuthorize("@accessControl.hasMenu('LOAN_APPROVE')")
     public ResponseEntity<ApiResponse<List<LoanQueueItemDTO>>> getBranchManagerQueue() {
         List<String> statuses = Arrays.asList(LoanStatus.WAITING_APPROVAL.name());
         List<LoanQueueItemDTO> queue = getQueueItems(statuses);
@@ -66,7 +65,7 @@ public class LoanWorkflowController {
     }
 
     @GetMapping("/queue/back-office")
-    @PreAuthorize("hasRole('BACK_OFFICE')")
+    @PreAuthorize("@accessControl.hasMenu('LOAN_DISBURSE')")
     public ResponseEntity<ApiResponse<List<LoanQueueItemDTO>>> getBackOfficeQueue() {
         List<String> statuses = Arrays.asList(LoanStatus.APPROVED_WAITING_DISBURSEMENT.name());
         List<LoanQueueItemDTO> queue = getQueueItems(statuses);
@@ -78,23 +77,23 @@ public class LoanWorkflowController {
         LoanApplication loanApplication = loanApplicationRepository.findById(loanId)
                 .orElseThrow(() -> new RuntimeException("Loan application not found with id: " + loanId));
 
-        List<String> userRoles = getCurrentUserRoles();
+        Long userId = getCurrentUserId();
         List<String> allowedActions = loanWorkflowService.getAllowedActions(
                 loanApplication.getCurrentStatus(),
-                userRoles);
+                userId);
 
         return ResponseUtil.ok(allowedActions, "Allowed actions retrieved successfully");
     }
 
     private List<LoanQueueItemDTO> getQueueItems(List<String> statuses) {
         List<LoanApplication> loans = loanApplicationRepository.findByCurrentStatusInOrderByCreatedAtDesc(statuses);
-        List<String> userRoles = getCurrentUserRoles();
 
         return loans.stream()
                 .map(loan -> {
+                    Long userId = getCurrentUserId();
                     List<String> allowedActions = loanWorkflowService.getAllowedActions(
                             loan.getCurrentStatus(),
-                            userRoles);
+                            userId);
 
                     return LoanQueueItemDTO.builder()
                             .loanApplicationId(loan.getLoanApplicationId())
@@ -128,24 +127,5 @@ public class LoanWorkflowController {
                 .findFirst()
                 .map(User::getId)
                 .orElseThrow(() -> new RuntimeException("No users found"));
-    }
-
-    private List<String> getCurrentUserRoles() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        if (authentication != null && authentication.getPrincipal() instanceof CustomUserDetails) {
-            CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-            Long userId = userDetails.getId();
-
-            User user = userRepository.findById(userId)
-                    .orElseThrow(() -> new RuntimeException("User not found"));
-
-            return user.getRoles().stream()
-                    .map(Role::getName)
-                    .collect(Collectors.toList());
-        }
-
-        // Fallback for testing - return all roles
-        return Arrays.asList("MARKETING", "BRANCH_MANAGER", "BACK_OFFICE");
     }
 }

@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/roles")
+@RequestMapping("/api/roles")
 @RequiredArgsConstructor
 public class RoleController {
 
@@ -27,5 +27,11 @@ public class RoleController {
     public ResponseEntity<ApiResponse<Role>> createRole(@RequestBody Role role) {
         Role createdRole = roleService.createRole(role);
         return ResponseUtil.created(createdRole, "Role created successfully");
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteRole(@PathVariable Long id) {
+        roleService.deleteRole(id);
+        return ResponseUtil.okMessage("Role deleted successfully");
     }
 }

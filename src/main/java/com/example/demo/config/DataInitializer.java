@@ -3,9 +3,14 @@ package com.example.demo.config;
 import com.example.demo.entity.Role;
 import com.example.demo.entity.User;
 import com.example.demo.entity.Product;
+import com.example.demo.entity.Menu;
+import com.example.demo.entity.RoleMenu;
 import com.example.demo.repository.RoleRepository;
 import com.example.demo.repository.UserRepository;
 import com.example.demo.repository.ProductRepository;
+import com.example.demo.repository.MenuRepository;
+import com.example.demo.repository.RoleMenuRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
@@ -20,43 +25,98 @@ public class DataInitializer implements CommandLineRunner {
         private final RoleRepository roleRepository;
         private final UserRepository userRepository;
         private final ProductRepository productRepository;
+        private final MenuRepository menuRepository;
+        private final RoleMenuRepository roleMenuRepository;
+        private final PasswordEncoder passwordEncoder;
 
         @Override
         public void run(String... args) throws Exception {
-                // Initialize roles if they don't exist
-                Role adminRole = roleRepository.findByName("ADMIN")
-                                .orElseGet(() -> {
-                                        Role role = Role.builder()
-                                                        .name("ADMIN")
-                                                        .build();
-                                        return roleRepository.save(role);
-                                });
+                Role adminRole = findOrCreateRole("ADMIN");
+                Role userRole = findOrCreateRole("USER");
+                Role backOfficeRole = findOrCreateRole("BACK_OFFICE");
+                Role branchManagerRole = findOrCreateRole("BRANCH_MANAGER");
+                Role marketingRole = findOrCreateRole("MARKETING");
 
-                Role userRole = roleRepository.findByName("USER")
-                                .orElseGet(() -> {
-                                        Role role = Role.builder()
-                                                        .name("USER")
-                                                        .build();
-                                        return roleRepository.save(role);
-                                });
+                // Initialize Menus
+                Menu loanSubmitMenu = findOrCreateMenu("LOAN_SUBMIT", "Submit Loan", "/api/loan-workflow/submit");
+                Menu loanReviewMenu = findOrCreateMenu("LOAN_REVIEW", "Review Loan",
+                                "/api/loan-workflow/queue/marketing");
+                Menu loanApproveMenu = findOrCreateMenu("LOAN_APPROVE", "Approve Loan",
+                                "/api/loan-workflow/queue/branch-manager");
+                Menu loanDisburseMenu = findOrCreateMenu("LOAN_DISBURSE", "Disburse Loan",
+                                "/api/loan-workflow/queue/back-office");
 
-                // Initialize a sample user if it doesn't exist
-                userRepository.findByUsername("admin")
-                                .orElseGet(() -> {
-                                        Set<Role> roles = new HashSet<>();
-                                        roles.add(adminRole);
-                                        roles.add(userRole);
+                // New RBAC Master Data Menus
+                Menu userRead = findOrCreateMenu("USER_READ", "Read Users", "/api/users/**");
+                Menu userCreate = findOrCreateMenu("USER_CREATE", "Create User", "/api/users");
+                Menu userUpdate = findOrCreateMenu("USER_UPDATE", "Update User", "/api/users/**");
+                Menu userDelete = findOrCreateMenu("USER_DELETE", "Delete User", "/api/users/**");
 
-                                        User user = User.builder()
-                                                        .username("admin")
-                                                        .email("admin@example.com")
-                                                        .password("admin123")
-                                                        .isActive(true)
-                                                        .roles(roles)
-                                                        .build();
+                Menu roleRead = findOrCreateMenu("ROLE_READ", "Read Roles", "/api/roles/**");
+                Menu roleAssign = findOrCreateMenu("ROLE_ASSIGN", "Assign Role", "/api/roles/assign");
+                Menu roleManage = findOrCreateMenu("ROLE_MANAGE", "Manage Roles", "/api/roles/**");
 
-                                        return userRepository.save(user);
-                                });
+                Menu loanCreate = findOrCreateMenu("LOAN_CREATE", "Create Loan Request", "/api/loan-workflow/submit");
+                Menu loanReject = findOrCreateMenu("LOAN_REJECT", "Reject Loan Request", "/api/loan-workflow/action");
+
+                Menu productRead = findOrCreateMenu("PRODUCT_READ", "Read Products", "/api/products/**");
+                Menu productManage = findOrCreateMenu("PRODUCT_MANAGE", "Manage Products", "/api/products/**");
+
+                Menu branchRead = findOrCreateMenu("BRANCH_READ", "Branch Reports",
+                                "/api/loan-workflow/queue/branch-manager");
+
+                Menu profileRead = findOrCreateMenu("PROFILE_READ", "Read Profile", "/api/user-profiles/**");
+                Menu profileUpdate = findOrCreateMenu("PROFILE_UPDATE", "Update Profile", "/api/user-profiles/**");
+
+                // Role-Specific Functional Modules
+                Menu marketingModule = findOrCreateMenu("MARKETING_MODULE", "Marketing Dashboard", "/api/marketing/**");
+                Menu managerModule = findOrCreateMenu("MANAGER_MODULE", "Branch Manager Dashboard",
+                                "/api/branch-manager/**");
+                Menu backOfficeModule = findOrCreateMenu("BACKOFFICE_MODULE", "Back Office Dashboard",
+                                "/api/back-office/**");
+                Menu adminModule = findOrCreateMenu("ADMIN_MODULE", "Admin Dashboard", "/api/admin/**");
+
+                findOrCreateMenu("DASHBOARD", "User Dashboard", "/api/dashboard/**");
+
+                // Initialize Role-Menu mappings
+                // USER (Customer)
+                mapRoleToMenu(userRole, loanCreate);
+                mapRoleToMenu(userRole, productRead);
+                mapRoleToMenu(userRole, profileRead);
+                mapRoleToMenu(userRole, profileUpdate);
+                mapRoleToMenu(userRole, loanSubmitMenu);
+
+                // MARKETING
+                mapRoleToMenu(marketingRole, loanReviewMenu);
+                mapRoleToMenu(marketingRole, marketingModule);
+
+                // BRANCH MANAGER
+                mapRoleToMenu(branchManagerRole, loanApproveMenu);
+                mapRoleToMenu(branchManagerRole, loanReject);
+                mapRoleToMenu(branchManagerRole, branchRead);
+                mapRoleToMenu(branchManagerRole, managerModule);
+
+                // BACK OFFICE
+                mapRoleToMenu(backOfficeRole, loanDisburseMenu);
+                mapRoleToMenu(backOfficeRole, backOfficeModule);
+
+                // ADMIN (Full Access)
+                mapRoleToMenu(adminRole, adminModule);
+                mapRoleToMenu(adminRole, userRead);
+                mapRoleToMenu(adminRole, userCreate);
+                mapRoleToMenu(adminRole, userUpdate);
+                mapRoleToMenu(adminRole, userDelete);
+                mapRoleToMenu(adminRole, roleRead);
+                mapRoleToMenu(adminRole, roleAssign);
+                mapRoleToMenu(adminRole, roleManage);
+                mapRoleToMenu(adminRole, productManage);
+
+                // Initialize test users
+                createTestUser("admin", "admin@example.com", "admin123", adminRole, userRole);
+                createTestUser("marketing", "marketing@example.com", "pass123", marketingRole);
+                createTestUser("manager", "manager@example.com", "pass123", branchManagerRole);
+                createTestUser("backoffice", "backoffice@example.com", "pass123", backOfficeRole);
+                createTestUser("user", "user@example.com", "pass123", userRole);
 
                 // Initialize sample loan products if they don't exist
                 productRepository.findByCode("LOAN-PERSONAL-001")
@@ -108,8 +168,51 @@ public class DataInitializer implements CommandLineRunner {
                                 });
 
                 System.out.println("✓ Data initialization completed!");
-                System.out.println("✓ Roles created: ADMIN, USER");
-                System.out.println("✓ Sample user created: admin (with ADMIN and USER roles)");
-                System.out.println("✓ Sample loan products created: Personal Loan, Home Mortgage, Vehicle Loan");
+                System.out.println("✓ Roles created: ADMIN, USER, BACK_OFFICE, BRANCH_MANAGER, MARKETING");
+                System.out.println("✓ Menus & RBAC seeded");
+        }
+
+        private Role findOrCreateRole(String name) {
+                return roleRepository.findByName(name)
+                                .orElseGet(() -> roleRepository.save(Role.builder().name(name).build()));
+        }
+
+        private Menu findOrCreateMenu(String code, String name, String urlPattern) {
+                return menuRepository.findByCode(code)
+                                .orElseGet(() -> menuRepository.save(Menu.builder()
+                                                .code(code)
+                                                .name(name)
+                                                .urlPattern(urlPattern)
+                                                .build()));
+        }
+
+        private void mapRoleToMenu(Role role, Menu menu) {
+                if (!roleMenuRepository
+                                .existsById(new com.example.demo.entity.RoleMenuId(role.getId(), menu.getMenuId()))) {
+                        roleMenuRepository.save(RoleMenu.builder()
+                                        .roleId(role.getId())
+                                        .menuId(menu.getMenuId())
+                                        .build());
+                }
+        }
+
+        private void createTestUser(String username, String email, String password, Role... roles) {
+                userRepository.findByUsername(username)
+                                .orElseGet(() -> {
+                                        Set<Role> roleSet = new HashSet<>();
+                                        for (Role r : roles) {
+                                                roleSet.add(r);
+                                        }
+
+                                        User user = User.builder()
+                                                        .username(username)
+                                                        .email(email)
+                                                        .password(passwordEncoder.encode(password))
+                                                        .isActive(true)
+                                                        .roles(roleSet)
+                                                        .build();
+
+                                        return userRepository.save(user);
+                                });
         }
 }

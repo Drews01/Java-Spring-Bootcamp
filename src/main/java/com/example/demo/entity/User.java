@@ -16,6 +16,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -56,6 +57,20 @@ public class User {
     @Builder.Default
     private Set<Role> roles = new HashSet<>();
 
+    @Column(name = "is_deleted")
+    @Builder.Default
+    private Boolean deleted = false;
+
     @Column(name = "last_password_reset_date")
     private LocalDateTime lastPasswordResetDate;
+
+    @PrePersist
+    protected void onCreate() {
+        if (deleted == null) {
+            deleted = false;
+        }
+        if (isActive == null) {
+            isActive = true;
+        }
+    }
 }

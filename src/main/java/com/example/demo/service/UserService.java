@@ -18,6 +18,30 @@ public class UserService {
     }
 
     public List<User> getAllUsers() {
-        return userRepository.findAll();
+        return userRepository.findByDeletedFalse();
+    }
+
+    public User getUserById(Long id) {
+        return userRepository.findById(id)
+                .filter(u -> u.getDeleted() == null || !u.getDeleted())
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+    }
+
+    public User updateUser(Long id, User userDetails) {
+        User user = getUserById(id);
+        user.setUsername(userDetails.getUsername());
+        user.setEmail(userDetails.getEmail());
+        user.setIsActive(userDetails.getIsActive());
+        if (userDetails.getRoles() != null) {
+            user.setRoles(userDetails.getRoles());
+        }
+        return userRepository.save(user);
+    }
+
+    public void deleteUser(Long id) {
+        User user = getUserById(id);
+        user.setDeleted(true);
+        user.setIsActive(false);
+        userRepository.save(user);
     }
 }
