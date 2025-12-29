@@ -58,6 +58,10 @@ public class Product implements Serializable {
     @Builder.Default
     private Boolean isActive = true;
 
+    @Column(name = "is_deleted")
+    @Builder.Default
+    private Boolean deleted = false;
+
     @Column(nullable = false, name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
@@ -68,6 +72,12 @@ public class Product implements Serializable {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
+        if (deleted == null) {
+            deleted = false;
+        }
+        if (isActive == null) {
+            isActive = true;
+        }
     }
 
     @PreUpdate

@@ -1,5 +1,6 @@
 package com.example.demo.entity;
 
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -54,4 +55,7 @@ public class User {
     @JsonIgnoreProperties("users")
     @Builder.Default
     private Set<Role> roles = new HashSet<>();
+
+    @Column(name = "last_password_reset_date")
+    private LocalDateTime lastPasswordResetDate;
 }

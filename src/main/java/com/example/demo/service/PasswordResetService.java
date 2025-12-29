@@ -1,57 +1,44 @@
 package com.example.demo.service;
 
-import com.example.demo.entity.PasswordReset;
-import com.example.demo.entity.User;
-import com.example.demo.repository.PasswordResetRepository;
-import com.example.demo.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDateTime;
+import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
+
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.stereotype.Service;
+
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
 public class PasswordResetService {
 
-    private final PasswordResetRepository passwordResetRepository;
-    private final UserRepository userRepository;
+    private final StringRedisTemplate redisTemplate;
 
-    @Transactional
-    public PasswordReset createPasswordResetToken(Long userId, int expiryHours) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+    private static final String RESET_TOKEN_PREFIX = "password_reset:token:";
 
+    public String createPasswordResetToken(Long userId, int expiryHours) {
         String token = UUID.randomUUID().toString();
+        String key = RESET_TOKEN_PREFIX + token;
 
-        PasswordReset passwordReset = PasswordReset.builder()
-                .user(user)
-                .tokenHash(token)
-                .expiresAt(LocalDateTime.now().plusHours(expiryHours))
-                .build();
+        // Store token with userId as value and set TTL
+        redisTemplate.opsForValue().set(key, String.valueOf(userId), Duration.ofHours(expiryHours));
 
-        return passwordResetRepository.save(passwordReset);
+        return token;
     }
 
-    @Transactional(readOnly = true)
-    public Optional<PasswordReset> validateToken(String token) {
-        return passwordResetRepository.findByTokenHashAndUsedAtIsNullAndExpiresAtAfter(
-                token, LocalDateTime.now());
+    public Optional<Long> validateToken(String token) {
+        String key = RESET_TOKEN_PREFIX + token;
+        String userIdStr = redisTemplate.opsForValue().get(key);
+
+        if (userIdStr != null) {
+            return Optional.of(Long.parseLong(userIdStr));
+        }
+        return Optional.empty();
     }
 
-    @Transactional
     public void markTokenAsUsed(String token) {
-        PasswordReset passwordReset = passwordResetRepository.findByTokenHash(token)
-                .orElseThrow(() -> new RuntimeException("Token not found"));
-
-        passwordReset.setUsedAt(LocalDateTime.now());
-        passwordResetRepository.save(passwordReset);
-    }
-
-    @Transactional
-    public void cleanupExpiredTokens() {
-        passwordResetRepository.deleteByExpiresAtBefore(LocalDateTime.now());
+        String key = RESET_TOKEN_PREFIX + token;
+        redisTemplate.delete(key);
     }
 }

@@ -19,9 +19,10 @@ public class ProductService {
 
     @CacheEvict(value = { "products", "activeProducts" }, allEntries = true)
     public Product createProduct(Product product) {
-        // Validate unique code
+        // Validate unique code (check universally to prevent DB constraint violation)
         if (productRepository.findByCode(product.getCode()).isPresent()) {
-            throw new IllegalArgumentException("Product with code '" + product.getCode() + "' already exists");
+            throw new IllegalArgumentException(
+                    "Product with code '" + product.getCode() + "' already exists (it might be deleted)");
         }
 
         // Validate amount ranges
@@ -39,12 +40,12 @@ public class ProductService {
 
     @Cacheable(value = "products")
     public List<Product> getAllProducts() {
-        return productRepository.findAll();
+        return productRepository.findByDeletedFalse();
     }
 
     @Cacheable(value = "activeProducts")
     public List<Product> getActiveProducts() {
-        return productRepository.findByIsActive(true);
+        return productRepository.findByIsActiveTrueAndDeletedFalse();
     }
 
     @CacheEvict(value = { "products", "activeProducts", "productByCode" }, allEntries = true)
@@ -57,7 +58,16 @@ public class ProductService {
 
     @Cacheable(value = "productByCode", key = "#code")
     public Product getProductByCode(String code) {
-        return productRepository.findByCode(code)
+        return productRepository.findByCodeAndDeletedFalse(code)
                 .orElseThrow(() -> new IllegalArgumentException("Product not found with code: " + code));
+    }
+
+    @CacheEvict(value = { "products", "activeProducts", "productByCode" }, allEntries = true)
+    public void deleteProduct(Long id) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Product not found with id: " + id));
+        product.setDeleted(true);
+        product.setIsActive(false); // Optionally set active to false
+        productRepository.save(product);
     }
 }

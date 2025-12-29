@@ -10,7 +10,9 @@ import com.example.demo.base.ApiResponse;
 import com.example.demo.base.ResponseUtil;
 import com.example.demo.dto.AuthRequest;
 import com.example.demo.dto.AuthResponse;
+import com.example.demo.dto.ForgotPasswordRequest;
 import com.example.demo.dto.RegisterRequest;
+import com.example.demo.dto.ResetPasswordRequest;
 import com.example.demo.service.AuthService;
 
 import jakarta.validation.Valid;
@@ -45,5 +47,39 @@ public class AuthController {
     public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody AuthRequest request) {
         AuthResponse authResponse = authService.login(request);
         return ResponseUtil.ok(authResponse, "Login successful");
+    }
+
+    /**
+     * Logout user
+     * POST /auth/logout
+     */
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<Void>> logout(jakarta.servlet.http.HttpServletRequest request) {
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            authService.logout(token);
+        }
+        return ResponseUtil.ok(null, "Logout successful");
+    }
+
+    /**
+     * Initiate password reset
+     * POST /auth/forgot-password
+     */
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ApiResponse<Void>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        authService.forgotPassword(request.getEmail());
+        return ResponseUtil.ok(null, "Password reset link sent to email");
+    }
+
+    /**
+     * Reset password
+     * POST /auth/reset-password
+     */
+    @PostMapping("/reset-password")
+    public ResponseEntity<ApiResponse<Void>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request.getToken(), request.getNewPassword());
+        return ResponseUtil.ok(null, "Password reset successfully");
     }
 }

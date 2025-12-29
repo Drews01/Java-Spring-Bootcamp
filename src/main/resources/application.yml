@@ -8,11 +8,24 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
+
     show-sql: true
     properties:
       hibernate:
         dialect: org.hibernate.dialect.SQLServerDialect
         format_sql: true
+  
+  mail:
+    host: sandbox.smtp.mailtrap.io
+    port: 2525
+    username: 04f199d623e1e97ea9a510b3c6e32e72
+    password: YOUR_MAILTRAP_PASSWORD_HERE
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
   
   # Redis Configuration
   data:

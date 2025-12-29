@@ -34,6 +34,9 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final TokenBlacklistService tokenBlacklistService;
+    private final PasswordResetService passwordResetService;
+    private final EmailService emailService;
 
     /**
      * Register a new user
@@ -96,6 +99,61 @@ public class AuthService {
         String token = jwtService.generateToken(userDetails);
 
         return buildAuthResponse(token, userDetails.getUser());
+    }
+
+    /**
+     * Logout user by blacklisting the token
+     */
+
+    public void logout(String token) {
+        // Extract expiration to calculate TTL
+        java.time.Instant expiration = jwtService.extractExpirationInstant(token);
+        long ttlSeconds = java.time.Duration.between(java.time.Instant.now(), expiration).getSeconds();
+
+        if (ttlSeconds > 0) {
+            tokenBlacklistService.blacklistToken(token, ttlSeconds);
+        }
+    }
+
+    /**
+     * Initiate password reset
+     */
+    @Transactional
+    public void forgotPassword(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with email: " + email));
+
+        // Create reset token (valid for 1 hour) in Redis
+        String token = passwordResetService.createPasswordResetToken(user.getId(), 1);
+
+        // Send email
+        String resetLink = "http://localhost:8080/reset-password?token=" + token;
+        emailService.sendSimpleMessage(
+                user.getEmail(),
+                "Password Reset Request",
+                "To reset your password, click the link below:\n" + resetLink);
+    }
+
+    /**
+     * Reset password
+     */
+    @Transactional
+    public void resetPassword(String token, String newPassword) {
+        Long userId = passwordResetService.validateToken(token)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid or expired password reset token"));
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        // Update password
+        user.setPassword(passwordEncoder.encode(newPassword));
+
+        // Update last password reset date to invalidate existing sessions
+        user.setLastPasswordResetDate(java.time.LocalDateTime.now());
+        userRepository.save(user);
+
+        // Mark token as used (delete from Redis)
+        passwordResetService.markTokenAsUsed(token);
     }
 
     /**
