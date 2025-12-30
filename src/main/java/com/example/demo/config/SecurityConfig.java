@@ -14,8 +14,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-import com.example.demo.security.JwtAuthFilter;
 import com.example.demo.security.DynamicAuthorizationManager;
+import com.example.demo.security.JwtAuthFilter;
 
 import lombok.RequiredArgsConstructor;
 
@@ -39,6 +39,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/login", "/auth/register").permitAll() // Allow specific auth endpoints
                         .requestMatchers("/error").permitAll() // Allow error endpoint
+                        .requestMatchers("/products/**").permitAll() // Allow public product endpoints
                         .anyRequest().access(dynamicAuthorizationManager) // Use dynamic RBAC for everything else
                 )
                 .sessionManagement(session -> session
