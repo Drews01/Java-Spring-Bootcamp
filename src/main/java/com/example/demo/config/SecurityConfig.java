@@ -39,7 +39,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/login", "/auth/register").permitAll() // Allow specific auth endpoints
                         .requestMatchers("/error").permitAll() // Allow error endpoint
-                        .requestMatchers("/products/**").permitAll() // Allow public product endpoints
+                        .requestMatchers("/api/products/**").permitAll() // Allow public product endpoints
                         .anyRequest().access(dynamicAuthorizationManager) // Use dynamic RBAC for everything else
                 )
                 .sessionManagement(session -> session

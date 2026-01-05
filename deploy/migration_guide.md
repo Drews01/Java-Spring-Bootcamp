@@ -40,6 +40,8 @@ In production, your SQL Server and Nginx will run in containers.
 | `SPRING_DATASOURCE_PASSWORD` | Strong DB password | `Prod_P@ssw0rd_2024!` |
 | `SPRING_DATA_REDIS_HOST` | Redis container name | `redis-server` |
 | `APP_SECURITY_JWT_SECRET` | Production-only secret | *(Generate a 64-character hex string)* |
+| `MAIL_USERNAME` | Email server username | *(Your Mailtrap/SMTP User)* |
+| `MAIL_PASSWORD` | Email server password | *(Your Mailtrap/SMTP Password)* |
 
 ## 4. Migration Execution Steps
 

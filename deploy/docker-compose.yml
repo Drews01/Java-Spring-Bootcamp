@@ -36,7 +36,7 @@ services:
       - sql-server
       - redis-server
     ports:
-      - "8081:8081"
+      - "8080:8080"
     environment:
       - SPRING_DATASOURCE_URL=jdbc:sqlserver://sql-server:1433;databaseName=LoanDatabase;encrypt=true;trustServerCertificate=true
       - SPRING_DATASOURCE_USERNAME=sa
@@ -44,6 +44,12 @@ services:
       - SPRING_DATA_REDIS_HOST=redis-server
       - SPRING_DATA_REDIS_PORT=6379
       - APP_SECURITY_JWT_SECRET=${JWT_SECRET:-404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+      - SPRING_MAIL_HOST=${MAIL_HOST:-sandbox.smtp.mailtrap.io}
+      - SPRING_MAIL_PORT=${MAIL_PORT:-2525}
+      - SPRING_MAIL_USERNAME=${MAIL_USERNAME:-04f199d623e1e97ea9a510b3c6e32e72}
+      - SPRING_MAIL_PASSWORD=${MAIL_PASSWORD:-YOUR_MAILTRAP_PASSWORD_HERE}
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH=true
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=true
     restart: always
 
   # Nginx Reverse Proxy
