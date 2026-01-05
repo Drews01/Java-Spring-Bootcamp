@@ -116,7 +116,7 @@ WHERE loan_application_id = (SELECT MAX(id) FROM loan_applications WHERE user_id
 **Body:**
 ```json
 {
-  "loanId": 1,
+  "loanApplicationId": 1,
   "action": "COMMENT",
   "comment": "Documents verified, customer eligible"
 }
@@ -133,7 +133,7 @@ WHERE loan_application_id = (SELECT MAX(id) FROM loan_applications WHERE user_id
 **Body:**
 ```json
 {
-  "loanId": 1,
+  "loanApplicationId": 1,
   "action": "FORWARD_TO_MANAGER",
   "comment": "Ready for manager approval"
 }
