@@ -61,8 +61,9 @@ public class DataInitializer implements CommandLineRunner {
 
     Menu loanCreate =
         findOrCreateMenu("LOAN_CREATE", "Create Loan Request", "/api/loan-workflow/submit");
-    Menu loanReject =
-        findOrCreateMenu("LOAN_REJECT", "Reject Loan Request", "/api/loan-workflow/action");
+    // Renamed generic action menu to be shared across roles
+    Menu loanAction =
+        findOrCreateMenu("LOAN_ACTION", "Perform Loan Action", "/api/loan-workflow/action");
 
     Menu productRead = findOrCreateMenu("PRODUCT_READ", "Read Products", "/api/products/**");
     Menu productManage = findOrCreateMenu("PRODUCT_MANAGE", "Manage Products", "/api/products/**");
@@ -97,16 +98,18 @@ public class DataInitializer implements CommandLineRunner {
     // MARKETING
     mapRoleToMenu(marketingRole, loanReviewMenu);
     mapRoleToMenu(marketingRole, marketingModule);
+    mapRoleToMenu(marketingRole, loanAction); // Added common action access
 
     // BRANCH MANAGER
     mapRoleToMenu(branchManagerRole, loanApproveMenu);
-    mapRoleToMenu(branchManagerRole, loanReject);
+    mapRoleToMenu(branchManagerRole, loanAction); // Shared action access
     mapRoleToMenu(branchManagerRole, branchRead);
     mapRoleToMenu(branchManagerRole, managerModule);
 
     // BACK OFFICE
     mapRoleToMenu(backOfficeRole, loanDisburseMenu);
     mapRoleToMenu(backOfficeRole, backOfficeModule);
+    mapRoleToMenu(backOfficeRole, loanAction); // Added common action access
 
     // ADMIN (Full Access)
     mapRoleToMenu(adminRole, adminModule);

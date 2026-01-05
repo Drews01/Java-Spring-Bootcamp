@@ -93,11 +93,12 @@ public class JwtService {
       if (customUserDetails.getUser().getLastPasswordResetDate() != null) {
         Date issuedAt = extractIssuedAt(token);
         Instant issuedAtInstant = issuedAt.toInstant();
-        Instant lastResetInstant = customUserDetails
-            .getUser()
-            .getLastPasswordResetDate()
-            .atZone(java.time.ZoneId.systemDefault())
-            .toInstant();
+        Instant lastResetInstant =
+            customUserDetails
+                .getUser()
+                .getLastPasswordResetDate()
+                .atZone(java.time.ZoneId.systemDefault())
+                .toInstant();
 
         // If issued before reset, token is invalid
         if (issuedAtInstant.isBefore(lastResetInstant)) {
