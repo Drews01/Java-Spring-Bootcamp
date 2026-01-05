@@ -6,6 +6,7 @@ public enum LoanStatus {
   WAITING_APPROVAL,
   APPROVED_WAITING_DISBURSEMENT,
   DISBURSED,
+  PAID,
   REJECTED;
 
   public static boolean isMarketingQueue(String status) {

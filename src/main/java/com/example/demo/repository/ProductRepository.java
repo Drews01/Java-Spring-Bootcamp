@@ -29,4 +29,16 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
   @Query(
       "SELECT COUNT(p) > 0 FROM Product p WHERE p.code = :code AND (p.deleted = false OR p.deleted IS NULL)")
   boolean existsByCodeAndDeletedFalse(@Param("code") String code);
+
+  // Tier system queries
+  @Query(
+      "SELECT p FROM Product p WHERE p.tierOrder = :tierOrder "
+          + "AND (p.deleted = false OR p.deleted IS NULL)")
+  Optional<Product> findByTierOrderAndDeletedFalse(@Param("tierOrder") Integer tierOrder);
+
+  @Query(
+      "SELECT p FROM Product p WHERE p.tierOrder IS NOT NULL "
+          + "AND (p.deleted = false OR p.deleted IS NULL) "
+          + "ORDER BY p.tierOrder ASC")
+  List<Product> findAllTierProductsOrderByTierAsc();
 }

@@ -31,52 +31,93 @@ public class LoanWorkflowService {
   private final ProductRepository productRepository;
   private final NotificationService notificationService;
   private final AccessControlService accessControl;
+  private final LoanEligibilityService loanEligibilityService;
 
   @Transactional
   public LoanApplicationDTO submitLoan(LoanSubmitRequest request) {
-    User user = userRepository
-        .findById(request.getUserId())
-        .orElseThrow(
-            () -> new RuntimeException("User not found with id: " + request.getUserId()));
+    User user =
+        userRepository
+            .findById(request.getUserId())
+            .orElseThrow(
+                () -> new RuntimeException("User not found with id: " + request.getUserId()));
 
-    Product product = productRepository
-        .findById(request.getProductId())
-        .orElseThrow(
-            () -> new RuntimeException("Product not found with id: " + request.getProductId()));
+    // Get user's current tier product (auto-assigns Bronze if not assigned)
+    Product tierProduct = loanEligibilityService.getCurrentTierProduct(request.getUserId());
+    if (tierProduct == null) {
+      throw new RuntimeException("No tier product available for user");
+    }
+
+    // Check credit limit eligibility
+    if (!loanEligibilityService.canApplyForLoan(request.getUserId(), request.getAmount())) {
+      Double remainingLimit = loanEligibilityService.getRemainingCreditLimit(request.getUserId());
+      throw new RuntimeException(
+          String.format(
+              "Loan amount %.2f exceeds remaining credit limit %.2f for %s tier",
+              request.getAmount(), remainingLimit, tierProduct.getName()));
+    }
+
+    // Use tier product if no specific product provided, otherwise validate the
+    // requested product
+    Product product;
+    if (request.getProductId() != null) {
+      product =
+          productRepository
+              .findById(request.getProductId())
+              .orElseThrow(
+                  () ->
+                      new RuntimeException("Product not found with id: " + request.getProductId()));
+    } else {
+      product = tierProduct;
+    }
 
     // Create loan application with SUBMITTED status
-    LoanApplication loanApplication = LoanApplication.builder()
-        .user(user)
-        .product(product)
-        .amount(request.getAmount())
-        .tenureMonths(request.getTenureMonths())
-        .interestRateApplied(request.getInterestRateApplied())
-        .currentStatus(LoanStatus.SUBMITTED.name())
-        .build();
+    LoanApplication loanApplication =
+        LoanApplication.builder()
+            .user(user)
+            .product(product)
+            .amount(request.getAmount())
+            .tenureMonths(request.getTenureMonths())
+            .interestRateApplied(
+                request.getInterestRateApplied() != null
+                    ? request.getInterestRateApplied()
+                    : product.getInterestRate())
+            .currentStatus(LoanStatus.SUBMITTED.name())
+            .isPaid(false)
+            .build();
 
     LoanApplication saved = loanApplicationRepository.save(loanApplication);
+
+    // Update user's used amount
+    loanEligibilityService.updateUsedAmount(request.getUserId(), request.getAmount());
 
     // Create history entry for SUBMIT action
     createHistoryEntry(
         saved, user, LoanAction.SUBMIT.name(), null, null, LoanStatus.SUBMITTED.name());
 
     log.info(
-        "Loan application {} submitted by user {}", saved.getLoanApplicationId(), user.getId());
+        "Loan application {} submitted by user {} for amount {} (Tier: {})",
+        saved.getLoanApplicationId(),
+        user.getId(),
+        request.getAmount(),
+        tierProduct.getName());
 
     return convertToDTO(saved);
   }
 
   @Transactional
   public LoanApplicationDTO performAction(LoanActionRequest request, Long actorUserId) {
-    LoanApplication loanApplication = loanApplicationRepository
-        .findById(request.getLoanApplicationId())
-        .orElseThrow(
-            () -> new RuntimeException(
-                "Loan application not found with id: " + request.getLoanApplicationId()));
+    LoanApplication loanApplication =
+        loanApplicationRepository
+            .findById(request.getLoanApplicationId())
+            .orElseThrow(
+                () ->
+                    new RuntimeException(
+                        "Loan application not found with id: " + request.getLoanApplicationId()));
 
-    User actorUser = userRepository
-        .findById(actorUserId)
-        .orElseThrow(() -> new RuntimeException("User not found with id: " + actorUserId));
+    User actorUser =
+        userRepository
+            .findById(actorUserId)
+            .orElseThrow(() -> new RuntimeException("User not found with id: " + actorUserId));
 
     String currentStatus = loanApplication.getCurrentStatus();
     String action = request.getAction();
@@ -138,16 +179,18 @@ public class LoanWorkflowService {
           // Check if a COMMENT has been made while in IN_REVIEW status
           // (The comment that moved it TO IN_REVIEW doesn't count, that was from
           // SUBMITTED)
-          boolean hasReviewComment = loanHistoryRepository
-              .findByLoanApplication_LoanApplicationIdOrderByCreatedAtDesc(
-                  loanApplicationRepository
-                      .findById(Long.valueOf(1)) // Temporary ID fetch, wait, I don't have ID here
-                      .map(LoanApplication::getLoanApplicationId)
-                      .orElse(0L))
-              .stream()
-              .anyMatch(
-                  h -> "COMMENT".equals(h.getAction())
-                      && "IN_REVIEW".equals(h.getFromStatus()));
+          boolean hasReviewComment =
+              loanHistoryRepository
+                  .findByLoanApplication_LoanApplicationIdOrderByCreatedAtDesc(
+                      loanApplicationRepository
+                          .findById(
+                              Long.valueOf(1)) // Temporary ID fetch, wait, I don't have ID here
+                          .map(LoanApplication::getLoanApplicationId)
+                          .orElse(0L))
+                  .stream()
+                  .anyMatch(
+                      h ->
+                          "COMMENT".equals(h.getAction()) && "IN_REVIEW".equals(h.getFromStatus()));
 
           // Wait, I cannot access repository easily here without ID.
           // I should move this check to performAction where I have the object.
@@ -224,14 +267,15 @@ public class LoanWorkflowService {
       String comment,
       String fromStatus,
       String toStatus) {
-    LoanHistory history = LoanHistory.builder()
-        .loanApplication(loanApplication)
-        .actorUser(actorUser)
-        .action(action)
-        .comment(comment)
-        .fromStatus(fromStatus)
-        .toStatus(toStatus)
-        .build();
+    LoanHistory history =
+        LoanHistory.builder()
+            .loanApplication(loanApplication)
+            .actorUser(actorUser)
+            .action(action)
+            .comment(comment)
+            .fromStatus(fromStatus)
+            .toStatus(toStatus)
+            .build();
 
     loanHistoryRepository.save(history);
   }

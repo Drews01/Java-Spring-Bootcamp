@@ -129,67 +129,76 @@ public class DataInitializer implements CommandLineRunner {
     createTestUser("backoffice", "backoffice@example.com", "pass123", backOfficeRole);
     createTestUser("user", "user@example.com", "pass123", userRole);
 
-    // Initialize sample loan products if they don't exist
-    productRepository
-        .findByCode("LOAN-PERSONAL-001")
-        .orElseGet(
-            () -> {
-              Product product =
-                  Product.builder()
-                      .code("LOAN-PERSONAL-001")
-                      .name("Personal Loan - Standard")
-                      .interestRate(8.5)
-                      .interestRateType("FIXED")
-                      .minAmount(5000000.0)
-                      .maxAmount(50000000.0)
-                      .minTenureMonths(6)
-                      .maxTenureMonths(36)
-                      .isActive(true)
-                      .build();
-              return productRepository.save(product);
-            });
-
-    productRepository
-        .findByCode("LOAN-MORTGAGE-001")
-        .orElseGet(
-            () -> {
-              Product product =
-                  Product.builder()
-                      .code("LOAN-MORTGAGE-001")
-                      .name("Home Mortgage Loan")
-                      .interestRate(6.75)
-                      .interestRateType("FLOATING")
-                      .minAmount(100000000.0)
-                      .maxAmount(2000000000.0)
-                      .minTenureMonths(60)
-                      .maxTenureMonths(240)
-                      .isActive(true)
-                      .build();
-              return productRepository.save(product);
-            });
-
-    productRepository
-        .findByCode("LOAN-VEHICLE-001")
-        .orElseGet(
-            () -> {
-              Product product =
-                  Product.builder()
-                      .code("LOAN-VEHICLE-001")
-                      .name("Vehicle Loan - Auto")
-                      .interestRate(7.25)
-                      .interestRateType("FIXED")
-                      .minAmount(20000000.0)
-                      .maxAmount(500000000.0)
-                      .minTenureMonths(12)
-                      .maxTenureMonths(60)
-                      .isActive(true)
-                      .build();
-              return productRepository.save(product);
-            });
+    // Initialize tier-based loan products (Bronze, Silver, Gold)
+    initializeTierProducts();
 
     System.out.println("✓ Data initialization completed!");
     System.out.println("✓ Roles created: ADMIN, USER, BACK_OFFICE, BRANCH_MANAGER, MARKETING");
     System.out.println("✓ Menus & RBAC seeded");
+    System.out.println("✓ Tier products created: BRONZE, SILVER, GOLD");
+  }
+
+  private void initializeTierProducts() {
+    // Bronze Tier - Entry level
+    findOrCreateTierProduct(
+        "TIER-BRONZE",
+        "Bronze Loan Product",
+        8.0, // 8% interest rate
+        10000000.0, // Credit limit: 10 million
+        15000000.0, // Upgrade threshold: 15 million paid
+        1 // Tier order
+        );
+
+    // Silver Tier - Mid level
+    findOrCreateTierProduct(
+        "TIER-SILVER",
+        "Silver Loan Product",
+        7.0, // 7% interest rate
+        25000000.0, // Credit limit: 25 million
+        50000000.0, // Upgrade threshold: 50 million paid
+        2 // Tier order
+        );
+
+    // Gold Tier - Top level
+    findOrCreateTierProduct(
+        "TIER-GOLD",
+        "Gold Loan Product",
+        6.0, // 6% interest rate
+        50000000.0, // Credit limit: 50 million
+        null, // No upgrade from Gold
+        3 // Tier order
+        );
+  }
+
+  private Product findOrCreateTierProduct(
+      String code,
+      String name,
+      Double interestRate,
+      Double creditLimit,
+      Double upgradeThreshold,
+      Integer tierOrder) {
+    return productRepository
+        .findByCode(code)
+        .orElseGet(
+            () -> {
+              Product product =
+                  Product.builder()
+                      .code(code)
+                      .name(name)
+                      .interestRate(interestRate)
+                      .interestRateType("FIXED")
+                      .minAmount(1000000.0) // Min: 1 million
+                      .maxAmount(creditLimit) // Max equals credit limit
+                      .minTenureMonths(3)
+                      .maxTenureMonths(36)
+                      .tierOrder(tierOrder)
+                      .creditLimit(creditLimit)
+                      .upgradeThreshold(upgradeThreshold)
+                      .isActive(true)
+                      .build();
+              System.out.println("✓ Created tier product: " + name);
+              return productRepository.save(product);
+            });
   }
 
   private Role findOrCreateRole(String name) {

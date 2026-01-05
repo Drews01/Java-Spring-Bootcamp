@@ -34,6 +34,14 @@ public class UserProduct {
   @Builder.Default
   private String status = "ACTIVE"; // ACTIVE / INACTIVE
 
+  @Column(name = "current_used_amount")
+  @Builder.Default
+  private Double currentUsedAmount = 0.0; // Total outstanding (unpaid) loan amounts
+
+  @Column(name = "total_paid_amount")
+  @Builder.Default
+  private Double totalPaidAmount = 0.0; // Cumulative paid amounts (for tier upgrades)
+
   @Column(name = "created_at", nullable = false, updatable = false)
   private LocalDateTime createdAt;
 

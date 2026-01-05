@@ -40,6 +40,13 @@ public class LoanApplication {
   @Column(name = "current_status", nullable = false, length = 50)
   private String currentStatus;
 
+  @Column(name = "is_paid")
+  @Builder.Default
+  private Boolean isPaid = false;
+
+  @Column(name = "paid_at")
+  private LocalDateTime paidAt;
+
   @Column(name = "created_at", nullable = false, updatable = false)
   private LocalDateTime createdAt;
 

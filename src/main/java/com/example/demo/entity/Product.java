@@ -53,6 +53,15 @@ public class Product implements Serializable {
   @Column(nullable = false, name = "max_tenure_months")
   private Integer maxTenureMonths;
 
+  @Column(name = "tier_order")
+  private Integer tierOrder; // 1=Bronze, 2=Silver, 3=Gold
+
+  @Column(name = "credit_limit")
+  private Double creditLimit; // Max total outstanding loans for this tier
+
+  @Column(name = "upgrade_threshold")
+  private Double upgradeThreshold; // Total paid amount needed to upgrade from this tier
+
   @Column(nullable = false, name = "is_active")
   @Builder.Default
   private Boolean isActive = true;
