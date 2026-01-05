@@ -31,6 +31,9 @@ public class AuthService {
   private final JwtService jwtService;
   private final AuthenticationManager authenticationManager;
   private final RefreshTokenService refreshTokenService;
+  private final TokenBlacklistService tokenBlacklistService;
+  private final PasswordResetService passwordResetService;
+  private final EmailService emailService;
 
   /** Register a new user */
   @Transactional
@@ -113,7 +116,7 @@ public class AuthService {
         .findById(userId)
         .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-    if (!user.isActive()) {
+    if (!Boolean.TRUE.equals(user.getIsActive())) {
       throw new IllegalArgumentException("User is inactive");
     }
 
