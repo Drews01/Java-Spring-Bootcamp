@@ -134,8 +134,7 @@ WHERE loan_application_id = (SELECT MAX(id) FROM loan_applications WHERE user_id
 ```json
 {
   "loanApplicationId": 1,
-  "action": "FORWARD_TO_MANAGER",
-  "comment": "Ready for manager approval"
+  "action": "FORWARD_TO_MANAGER"
 }
 ```
 *Result:* Status transitions `IN_REVIEW -> WAITING_APPROVAL`. Branch Manager(s) receive notifications.
@@ -168,7 +167,7 @@ WHERE loan_application_id = (SELECT MAX(id) FROM loan_applications WHERE user_id
 **Body:**
 ```json
 {
-  "loanId": 1,
+  "loanApplicationId": 1,
   "action": "APPROVE",
   "comment": "Approved for disbursement"
 }
@@ -203,7 +202,7 @@ WHERE loan_application_id = (SELECT MAX(id) FROM loan_applications WHERE user_id
 **Body:**
 ```json
 {
-  "loanId": 1,
+  "loanApplicationId": 1,
   "action": "DISBURSE",
   "comment": "Funds transferred to customer account"
 }
