@@ -253,10 +253,10 @@ Located in `deploy/` folder:
 
 ## 📝 Change Log
 
-### 2025-01-05
+### 2026-01-05
 - **Documentation Update**: Created comprehensive feature summary in LogUpdate.md
 
-### 2025-12-30
+### 2026-01-04
 - **Docker Support**: Added Dockerfile, docker-compose.yml, and migration documentation for Linux cloud deployment
 
 ### 2025-12-29

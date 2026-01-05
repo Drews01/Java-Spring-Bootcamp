@@ -27,7 +27,7 @@ This guide explains how to verify the Soft Delete functionality for Products usi
 **Body:**
 ```json
 {
-    "code": "SD-TEST-001",
+    "code": "SD-TEST-NEW-001",
     "name": "Product To Delete",
     "minAmount": 5000000,
     "maxAmount": 10000000,

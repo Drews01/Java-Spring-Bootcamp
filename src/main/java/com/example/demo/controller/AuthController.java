@@ -65,4 +65,12 @@ public class AuthController {
     authService.resetPassword(request.getToken(), request.getNewPassword());
     return ResponseUtil.ok(null, "Password reset successfully");
   }
+
+  /** Refresh access token POST /auth/refresh */
+  @PostMapping("/refresh")
+  public ResponseEntity<ApiResponse<AuthResponse>> refreshToken(
+      @Valid @RequestBody com.example.demo.dto.RefreshTokenRequest request) {
+    AuthResponse authResponse = authService.refreshAccessToken(request.refreshToken());
+    return ResponseUtil.ok(authResponse, "Token refreshed successfully");
+  }
 }

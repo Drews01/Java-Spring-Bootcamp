@@ -1,4 +1,6 @@
 # Spring Boot REST API - Documentation
+Ketika ingin membuat pokoknya, Entity itu harus dihubungkan dengan Repository, repository itu harus dihubungkan dengan Service, service itu harus dihubungkan dengan Controller.
+
 
 ## Table of Contents
 1. [JPA Annotations Explained](#jpa-annotations-explained)

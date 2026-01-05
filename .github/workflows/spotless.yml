@@ -2,9 +2,9 @@ name: Spotless Code Formatting Check
 
 on:
   push:
-    branches: [main, master, develop]
+    branches: [main, master, develop, Spotless]
   pull_request:
-    branches: [main, master, develop]
+    branches: [main, master, develop, Spotless]
 
 jobs:
   spotless:

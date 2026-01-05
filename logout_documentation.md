@@ -91,7 +91,43 @@ Follow these steps to manually verify the secure logout flow using Postman.
 4.  Verify response is **200 OK** with message "Logout successful".
 
 ### Step 4: Verify Blacklist (Access Resource Again)
-1.  Repeat **Step 2** (Access Protected Resource) using the **SAME** token.
+1.  Repeat **Step 2** (Access Protected Resource) using the **SAME** access token.
 2.  **Send**.
-3.  **Expected Result**: `401 Unauthorized` (or `403 Forbidden`).
-    *   This confirms the token has been successfully blacklisted in Redis and is no longer valid.
+3.  **Expected Result**: `401 Unauthorized`.
+    *   This confirms the token has been successfully blacklisted in Redis.
+
+## Refresh Token Flow (New Feature)
+
+### 1. Login (Get Refresh Token)
+*   **URL**: `/auth/login`
+*   **Response**:
+    ```json
+    {
+      "success": true,
+      "data": {
+        "token": "ey...",           // Access Token (Expires in 1 hour)
+        "refreshToken": "7f...",    // Refresh Token (Expires in 7 days)
+        "tokenType": "Bearer",
+        "expiresAt": "...",
+        "refreshExpiresAt": "..."
+      }
+    }
+    ```
+
+### 2. Refresh Access Token
+*   **URL**: `/auth/refresh`
+*   **Method**: `POST`
+*   **Body**:
+    ```json
+    {
+      "refreshToken": "7f..." // Check your login response for this value
+    }
+    ```
+*   **Success Response**: Returns a NEW access token and a NEW refresh token (Token Rotation).
+
+### 3. Test Security Scenarios
+| Scenario | Action | Expected Result |
+|----------|--------|-----------------|
+| **Refresh after Logout** | Call `/auth/logout`, then `/auth/refresh` | `401 Unauthorized` (Token revoked) |
+| **Refresh after Password Reset** | Call `/auth/reset-password`, then `/auth/refresh` | `401 Unauthorized` (All tokens revoked) |
+| **Use Refresh Token as Access Token** | Call protected API with `Bearer <refresh_token>` | `403 Forbidden` (Invalid token type) |
