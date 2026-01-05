@@ -16,5 +16,7 @@ public class UserProfileDTO {
   private String nik;
   private String ktpPath;
   private String phoneNumber;
+  private String accountNumber;
+  private String bankName;
   private LocalDateTime updatedAt;
 }

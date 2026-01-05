@@ -32,6 +32,7 @@ public class LoanWorkflowService {
   private final NotificationService notificationService;
   private final AccessControlService accessControl;
   private final LoanEligibilityService loanEligibilityService;
+  private final UserProfileService userProfileService;
 
   @Transactional
   public LoanApplicationDTO submitLoan(LoanSubmitRequest request, Long userId) {
@@ -44,6 +45,21 @@ public class LoanWorkflowService {
     Product tierProduct = loanEligibilityService.getCurrentTierProduct(userId);
     if (tierProduct == null) {
       throw new RuntimeException("No tier product available for user");
+    }
+
+    // Validate user profile is complete before allowing loan submission
+    if (!userProfileService.isProfileComplete(userId)) {
+      throw new IllegalStateException(
+          "Cannot submit loan. Your profile is incomplete. "
+              + "Please complete all required fields: address, NIK, KTP document, phone number, account number, and bank name. "
+              + "Update your profile at /api/user-profiles");
+    }
+
+    // Check if user has any active (pending) loans
+    if (loanApplicationRepository.hasActiveLoan(userId)) {
+      throw new IllegalStateException(
+          "Cannot submit new loan. You already have an active loan application that is being processed. "
+              + "Please wait for your current loan to be disbursed, paid, or rejected before submitting a new one.");
     }
 
     // Check credit limit eligibility

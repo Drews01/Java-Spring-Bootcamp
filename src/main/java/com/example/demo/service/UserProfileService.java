@@ -32,6 +32,8 @@ public class UserProfileService {
             .nik(dto.getNik())
             .ktpPath(dto.getKtpPath())
             .phoneNumber(dto.getPhoneNumber())
+            .accountNumber(dto.getAccountNumber())
+            .bankName(dto.getBankName())
             .build();
 
     UserProfile saved = userProfileRepository.save(userProfile);
@@ -67,6 +69,8 @@ public class UserProfileService {
     userProfile.setNik(dto.getNik());
     userProfile.setKtpPath(dto.getKtpPath());
     userProfile.setPhoneNumber(dto.getPhoneNumber());
+    userProfile.setAccountNumber(dto.getAccountNumber());
+    userProfile.setBankName(dto.getBankName());
 
     UserProfile updated = userProfileRepository.save(userProfile);
     return convertToDTO(updated);
@@ -77,6 +81,31 @@ public class UserProfileService {
     userProfileRepository.deleteById(userId);
   }
 
+  /**
+   * Check if user profile is complete with all required fields.
+   *
+   * @param userId the user ID to check
+   * @return true if profile exists and all required fields are filled, false otherwise
+   */
+  @Transactional(readOnly = true)
+  public boolean isProfileComplete(Long userId) {
+    return userProfileRepository
+        .findById(userId)
+        .map(
+            profile ->
+                isNotBlank(profile.getAddress())
+                    && isNotBlank(profile.getNik())
+                    && isNotBlank(profile.getKtpPath())
+                    && isNotBlank(profile.getPhoneNumber())
+                    && isNotBlank(profile.getAccountNumber())
+                    && isNotBlank(profile.getBankName()))
+        .orElse(false);
+  }
+
+  private boolean isNotBlank(String str) {
+    return str != null && !str.trim().isEmpty();
+  }
+
   private UserProfileDTO convertToDTO(UserProfile userProfile) {
     return UserProfileDTO.builder()
         .userId(userProfile.getUserId())
@@ -84,6 +113,8 @@ public class UserProfileService {
         .nik(userProfile.getNik())
         .ktpPath(userProfile.getKtpPath())
         .phoneNumber(userProfile.getPhoneNumber())
+        .accountNumber(userProfile.getAccountNumber())
+        .bankName(userProfile.getBankName())
         .updatedAt(userProfile.getUpdatedAt())
         .build();
   }

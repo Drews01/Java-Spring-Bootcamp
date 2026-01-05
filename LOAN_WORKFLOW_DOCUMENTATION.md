@@ -61,31 +61,67 @@ The system uses a dynamic Role-Based Access Control (RBAC) system. Each queue is
 **Body (raw JSON):**
 ```json
 {
-  "userId": 7,
   "productId": 1,
-  "amount": 10000000.0,
+  "amount": 5000000.0,
   "tenureMonths": 12,
-  "interestRateApplied": 0.1
+  "interestRateApplied": 12.0
 }
 ```
-*Result:* Status becomes `SUBMITTED`. A history record is created.
+
+> [!IMPORTANT]
+> **Security Update:** The `userId` field has been **removed** from the request body. The user ID is now automatically extracted from the JWT token to prevent IDOR vulnerabilities.
+
+> [!NOTE]
+> **Automatic Calculations:**
+> - `totalAmountToPay` is automatically calculated using the EMI formula: `EMI = [P × r × (1+r)^n] / [(1+r)^n - 1]`
+> - Total repayment amount = EMI × number of months
+> - Example: ₹5,000,000 loan at 12% annual interest for 12 months = ₹5,330,000 total to repay
+
+**Validation Rules:**
+1. ✅ User must have no active pending loans (SUBMITTED, IN_REVIEW, WAITING_APPROVAL, or APPROVED_WAITING_DISBURSEMENT)
+2. ✅ Loan amount must be within user's remaining credit limit
+3. ✅ Product must be active and not soft-deleted
+
+**Response Example:**
+```json
+{
+  "success": true,
+  "data": {
+    "loanApplicationId": 1,
+    "userId": 7,
+    "productId": 1,
+    "amount": 5000000.0,
+    "tenureMonths": 12,
+    "interestRateApplied": 12.0,
+    "totalAmountToPay": 5330000.0,
+    "currentStatus": "SUBMITTED",
+    "createdAt": "2026-01-05T15:00:00",
+    "updatedAt": "2026-01-05T15:00:00"
+  }
+}
+```
+
+**Possible Errors:**
+- `IllegalStateException`: "Cannot submit new loan. You already have an active loan application that is being processed..."
+- `RuntimeException`: "Loan amount exceeds remaining credit limit..."
 
 **📋 Database Tables to Check:**
 
 | Table | Query | What to Verify |
 |-------|-------|----------------|
-| `loan_applications` | `SELECT * FROM loan_applications WHERE user_id = 7;` | New loan with `current_status = 'SUBMITTED'` |
+| `loan_applications` | `SELECT * FROM loan_applications WHERE user_id = 7;` | New loan with `current_status = 'SUBMITTED'` and `total_amount_to_pay` calculated |
 | `loan_history` | `SELECT * FROM loan_history WHERE loan_application_id = <loan_id>;` | Initial history record with `action = 'SUBMIT'` |
 | `notifications` | `SELECT * FROM notifications WHERE user_id = 7;` | Confirmation notification created |
 
 ```sql
 -- Quick verification queries
-SELECT id, user_id, product_id, amount, current_status, created_at 
+SELECT id, user_id, product_id, amount, tenure_months, 
+       interest_rate_applied, total_amount_to_pay, current_status, created_at 
 FROM loan_applications 
 WHERE user_id = 7 ORDER BY created_at DESC;
 
 SELECT * FROM loan_history 
-WHERE loan_application_id = (SELECT MAX(id) FROM loan_applications WHERE user_id = 7);
+WHERE loan_application_id = (SELECT MAX(loan_application_id) FROM loan_applications WHERE user_id = 7);
 ```
 
 ---
@@ -402,13 +438,141 @@ For efficient testing, set up Postman:
    }
    ```
 
-3. **Test Scripts** (for automatic validation):
-   ```javascript
-   pm.test("Status code is 200", function() {
-       pm.response.to.have.status(200);
-   });
-   pm.test("Response is success", function() {
-       var jsonData = pm.response.json();
-       pm.expect(jsonData.success).to.eql(true);
-   });
-   ```
+1.  **Environment Variables**:
+    -   `base_url`: `http://localhost:8081`
+    -   `marketing_token`: (auto-set after login)
+    -   `manager_token`: (auto-set after login)
+    -   `backoffice_token`: (auto-set after login)
+
+2.  **Pre-request Script** (for auto-token refresh):
+    ```javascript
+    // Add to collection pre-request
+    if (pm.environment.get("token_expiry") < Date.now()) {
+        // Call login and refresh token
+    }
+    ```
+
+3.  **Test Scripts** (for automatic validation):
+    ```javascript
+    pm.test("Status code is 200", function() {
+        pm.response.to.have.status(200);
+    });
+    pm.test("Response is success", function() {
+        var jsonData = pm.response.json();
+        pm.expect(jsonData.success).to.eql(true);
+    });
+    ```
+
+---
+
+## 7. New Features (January 2026 Update)
+
+### 7.1 Automatic Total Loan Amount Calculation
+
+The system now automatically calculates the **total repayment amount** (principal + interest) when a loan is submitted.
+
+#### How It Works:
+- Uses the **EMI formula**: `EMI = [P × r × (1+r)^n] / [(1+r)^n - 1]`
+  - `P` = Principal (loan amount)
+  - `r` = Monthly interest rate (annual rate ÷ 12 ÷ 100)
+  - `n` = Tenure in months
+- **Total Amount to Pay** = EMI × number of months
+
+#### Implementation Details:
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| Database Column | `loan_applications.total_amount_to_pay` | Stores calculated amount |
+| DTO Field | `LoanApplicationDTO.totalAmountToPay` | Returns in API response |
+| Calculation Method | `LoanWorkflowService.calculateTotalAmountToPay()` | Private helper method |
+| Integration | `LoanWorkflowService.submitLoan()` | Auto-calculates on submission |
+
+#### Example Calculation:
+```
+Loan: ₹5,000,000
+Interest: 12% per year
+Tenure: 12 months
+
+Monthly Interest Rate: 12% ÷ 12 ÷ 100 = 0.01
+EMI = [5000000 × 0.01 × (1+0.01)^12] / [(1+0.01)^12 - 1]
+EMI ≈ ₹444,244
+
+Total Amount = 444,244 × 12 = ₹5,330,928
+```
+
+### 7.2 Duplicate Loan Prevention
+
+Users are **prevented from submitting multiple simultaneous loan applications**. Only one active loan is allowed at a time.
+
+#### Validation Rules:
+Users **CANNOT submit a new loan** if they have an existing loan in any of these statuses:
+- ❌ `SUBMITTED`
+- ❌ `IN_REVIEW`
+- ❌ `WAITING_APPROVAL`
+- ❌ `APPROVED_WAITING_DISBURSEMENT`
+
+Users **CAN submit a new loan** if all previous loans are in these final statuses:
+- ✅ `DISBURSED` (fully disbursed and active)
+- ✅ `PAID` (fully repaid)
+- ✅ `REJECTED` (application rejected)
+
+#### Implementation Details:
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| Repository Method | `LoanApplicationRepository.hasActiveLoan()` | Checks for active loans using JPQL |
+| Validation | `LoanWorkflowService.submitLoan()` | Validates before creating loan |
+| Error Type | `IllegalStateException` | Thrown if validation fails |
+
+#### Error Response Example:
+```json
+{
+  "success": false,
+  "message": "Cannot submit new loan. You already have an active loan application that is being processed. Please wait for your current loan to be disbursed, paid, or rejected before submitting a new one."
+}
+```
+
+#### Testing Duplicate Prevention:
+```bash
+# Step 1: Submit first loan (should succeed)
+POST /api/loan-workflow/submit
+Body: { "productId": 1, "amount": 5000000, "tenureMonths": 12 }
+# Response: 200 OK, loan created with status SUBMITTED
+
+# Step 2: Try to submit second loan (should fail)
+POST /api/loan-workflow/submit
+Body: { "productId": 1, "amount": 3000000, "tenureMonths": 6 }
+# Response: 400 Bad Request with error message
+
+# Step 3: Move first loan to DISBURSED
+POST /api/loan-workflow/action
+# ... (complete the workflow to DISBURSED status)
+
+# Step 4: Now you can submit a new loan (should succeed)
+POST /api/loan-workflow/submit
+Body: { "productId": 1, "amount": 3000000, "tenureMonths": 6 }
+# Response: 200 OK, new loan created
+```
+
+### 7.3 Security Improvements
+
+#### IDOR Prevention
+The `userId` field has been **removed** from the loan submission request body:
+
+**❌ Old (Insecure):**
+```json
+{
+  "userId": 7,
+  "productId": 1,
+  "amount": 5000000
+}
+```
+
+**✅ New (Secure):**
+```json
+{
+  "productId": 1,
+  "amount": 5000000,
+  "tenureMonths": 12
+}
+```
+
+The user ID is now automatically extracted from the JWT token, preventing **Insecure Direct Object Reference (IDOR)** vulnerabilities where users could submit loans on behalf of other users.

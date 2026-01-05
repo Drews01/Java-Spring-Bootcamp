@@ -36,6 +36,12 @@ public class UserProfile {
   @Column(name = "phone_number", length = 20)
   private String phoneNumber;
 
+  @Column(name = "account_number", length = 50)
+  private String accountNumber;
+
+  @Column(name = "bank_name", length = 100)
+  private String bankName;
+
   @Column(name = "updated_at", nullable = false)
   private LocalDateTime updatedAt;
 

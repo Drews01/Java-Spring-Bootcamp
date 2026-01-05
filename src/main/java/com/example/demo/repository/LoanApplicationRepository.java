@@ -34,7 +34,14 @@ public interface LoanApplicationRepository extends JpaRepository<LoanApplication
   Double findTotalUnpaidAmountByUserId(@Param("userId") Long userId);
 
   @Query(
-      "SELECT COALESCE(SUM(la.amount), 0) FROM LoanApplication la "
-          + "WHERE la.user.id = :userId AND la.isPaid = true")
+      "SELECT COALESCE(SUM(la.amount), 0) FROM LoanApplication la"
+          + " WHERE la.user.id = :userId AND la.isPaid = true")
   Double findTotalPaidAmountByUserId(@Param("userId") Long userId);
+
+  // Check if user has any active loans (not in final status)
+  @Query(
+      "SELECT COUNT(la) > 0 FROM LoanApplication la"
+          + " WHERE la.user.id = :userId"
+          + " AND la.currentStatus NOT IN ('DISBURSED', 'PAID', 'REJECTED')")
+  boolean hasActiveLoan(@Param("userId") Long userId);
 }
