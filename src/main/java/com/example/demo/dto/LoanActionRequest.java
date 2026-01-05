@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class LoanActionRequest {
-    private Long loanApplicationId;
-    private String action;
-    private String comment;
+  private Long loanApplicationId;
+  private String action;
+  private String comment;
 }

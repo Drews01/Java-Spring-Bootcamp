@@ -10,9 +10,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class LoanSubmitRequest {
-    private Long userId;
-    private Long productId;
-    private Double amount;
-    private Integer tenureMonths;
-    private Double interestRateApplied;
+  private Long userId;
+  private Long productId;
+  private Double amount;
+  private Integer tenureMonths;
+  private Double interestRateApplied;
 }

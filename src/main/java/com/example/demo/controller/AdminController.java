@@ -14,15 +14,16 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class AdminController {
 
-    @GetMapping("/dashboard")
-    @PreAuthorize("@accessControl.hasMenu('ADMIN_MODULE')")
-    public ResponseEntity<ApiResponse<String>> getDashboard() {
-        return ResponseUtil.ok("Welcome to the System Administration Dashboard.", "Admin access verified");
-    }
+  @GetMapping("/dashboard")
+  @PreAuthorize("@accessControl.hasMenu('ADMIN_MODULE')")
+  public ResponseEntity<ApiResponse<String>> getDashboard() {
+    return ResponseUtil.ok(
+        "Welcome to the System Administration Dashboard.", "Admin access verified");
+  }
 
-    @GetMapping("/system-logs")
-    @PreAuthorize("@accessControl.hasMenu('ADMIN_MODULE')")
-    public ResponseEntity<ApiResponse<String>> getSystemLogs() {
-        return ResponseUtil.ok("System logs would be visible here.", "Admin access verified");
-    }
+  @GetMapping("/system-logs")
+  @PreAuthorize("@accessControl.hasMenu('ADMIN_MODULE')")
+  public ResponseEntity<ApiResponse<String>> getSystemLogs() {
+    return ResponseUtil.ok("System logs would be visible here.", "Admin access verified");
+  }
 }

@@ -14,15 +14,17 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class BranchManagerController {
 
-    @GetMapping("/dashboard")
-    @PreAuthorize("@accessControl.hasMenu('MANAGER_MODULE')")
-    public ResponseEntity<ApiResponse<String>> getDashboard() {
-        return ResponseUtil.ok("Welcome to the Branch Manager Dashboard.", "Branch Manager access verified");
-    }
+  @GetMapping("/dashboard")
+  @PreAuthorize("@accessControl.hasMenu('MANAGER_MODULE')")
+  public ResponseEntity<ApiResponse<String>> getDashboard() {
+    return ResponseUtil.ok(
+        "Welcome to the Branch Manager Dashboard.", "Branch Manager access verified");
+  }
 
-    @GetMapping("/reports")
-    @PreAuthorize("@accessControl.hasMenu('MANAGER_MODULE')")
-    public ResponseEntity<ApiResponse<String>> getReports() {
-        return ResponseUtil.ok("Branch Manager reports data would go here.", "Branch Manager access verified");
-    }
+  @GetMapping("/reports")
+  @PreAuthorize("@accessControl.hasMenu('MANAGER_MODULE')")
+  public ResponseEntity<ApiResponse<String>> getReports() {
+    return ResponseUtil.ok(
+        "Branch Manager reports data would go here.", "Branch Manager access verified");
+  }
 }

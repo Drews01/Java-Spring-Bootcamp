@@ -1,5 +1,8 @@
 package com.example.demo.config;
 
+import com.example.demo.security.DynamicAuthorizationManager;
+import com.example.demo.security.JwtAuthFilter;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -14,49 +17,46 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-import com.example.demo.security.DynamicAuthorizationManager;
-import com.example.demo.security.JwtAuthFilter;
-
-import lombok.RequiredArgsConstructor;
-
-/**
- * Spring Security Configuration
- * Configures JWT-based authentication and authorization
- */
+/** Spring Security Configuration Configures JWT-based authentication and authorization */
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final JwtAuthFilter jwtAuthFilter;
-    private final DynamicAuthorizationManager dynamicAuthorizationManager;
+  private final JwtAuthFilter jwtAuthFilter;
+  private final DynamicAuthorizationManager dynamicAuthorizationManager;
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .csrf(AbstractHttpConfigurer::disable) // Disable CSRF for stateless JWT
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/login", "/auth/register").permitAll() // Allow specific auth endpoints
-                        .requestMatchers("/error").permitAll() // Allow error endpoint
-                        .requestMatchers("/api/products/**").permitAll() // Allow public product endpoints
-                        .anyRequest().access(dynamicAuthorizationManager) // Use dynamic RBAC for everything else
-                )
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS) // No sessions
-                )
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+  @Bean
+  public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    http.csrf(AbstractHttpConfigurer::disable) // Disable CSRF for stateless JWT
+        .authorizeHttpRequests(
+            auth ->
+                auth.requestMatchers("/auth/login", "/auth/register")
+                    .permitAll() // Allow specific auth endpoints
+                    .requestMatchers("/error")
+                    .permitAll() // Allow error endpoint
+                    .requestMatchers("/api/products/**")
+                    .permitAll() // Allow public product endpoints
+                    .anyRequest()
+                    .access(dynamicAuthorizationManager) // Use dynamic RBAC for everything else
+            )
+        .sessionManagement(
+            session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS) // No sessions
+            )
+        .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
-        return http.build();
-    }
+    return http.build();
+  }
 
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+  @Bean
+  public PasswordEncoder passwordEncoder() {
+    return new BCryptPasswordEncoder();
+  }
 
-    @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
-        return config.getAuthenticationManager();
-    }
+  @Bean
+  public AuthenticationManager authenticationManager(AuthenticationConfiguration config)
+      throws Exception {
+    return config.getAuthenticationManager();
+  }
 }

@@ -14,15 +14,15 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class MarketingController {
 
-    @GetMapping("/dashboard")
-    @PreAuthorize("@accessControl.hasMenu('MARKETING_MODULE')")
-    public ResponseEntity<ApiResponse<String>> getDashboard() {
-        return ResponseUtil.ok("Welcome to the Marketing Dashboard.", "Marketing access verified");
-    }
+  @GetMapping("/dashboard")
+  @PreAuthorize("@accessControl.hasMenu('MARKETING_MODULE')")
+  public ResponseEntity<ApiResponse<String>> getDashboard() {
+    return ResponseUtil.ok("Welcome to the Marketing Dashboard.", "Marketing access verified");
+  }
 
-    @GetMapping("/stats")
-    @PreAuthorize("@accessControl.hasMenu('MARKETING_MODULE')")
-    public ResponseEntity<ApiResponse<String>> getStats() {
-        return ResponseUtil.ok("Marketing stats data would go here.", "Marketing access verified");
-    }
+  @GetMapping("/stats")
+  @PreAuthorize("@accessControl.hasMenu('MARKETING_MODULE')")
+  public ResponseEntity<ApiResponse<String>> getStats() {
+    return ResponseUtil.ok("Marketing stats data would go here.", "Marketing access verified");
+  }
 }

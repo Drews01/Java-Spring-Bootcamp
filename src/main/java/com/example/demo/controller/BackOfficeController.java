@@ -14,15 +14,16 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class BackOfficeController {
 
-    @GetMapping("/dashboard")
-    @PreAuthorize("@accessControl.hasMenu('BACKOFFICE_MODULE')")
-    public ResponseEntity<ApiResponse<String>> getDashboard() {
-        return ResponseUtil.ok("Welcome to the Back Office Dashboard.", "Back Office access verified");
-    }
+  @GetMapping("/dashboard")
+  @PreAuthorize("@accessControl.hasMenu('BACKOFFICE_MODULE')")
+  public ResponseEntity<ApiResponse<String>> getDashboard() {
+    return ResponseUtil.ok("Welcome to the Back Office Dashboard.", "Back Office access verified");
+  }
 
-    @GetMapping("/disbursements")
-    @PreAuthorize("@accessControl.hasMenu('BACKOFFICE_MODULE')")
-    public ResponseEntity<ApiResponse<String>> getDisbursements() {
-        return ResponseUtil.ok("Back Office disbursement tracking would go here.", "Back Office access verified");
-    }
+  @GetMapping("/disbursements")
+  @PreAuthorize("@accessControl.hasMenu('BACKOFFICE_MODULE')")
+  public ResponseEntity<ApiResponse<String>> getDisbursements() {
+    return ResponseUtil.ok(
+        "Back Office disbursement tracking would go here.", "Back Office access verified");
+  }
 }
