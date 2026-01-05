@@ -35,7 +35,9 @@ public class LoanWorkflowController {
   @PostMapping("/submit")
   public ResponseEntity<ApiResponse<LoanApplicationDTO>> submitLoan(
       @RequestBody LoanSubmitRequest request) {
-    LoanApplicationDTO created = loanWorkflowService.submitLoan(request);
+    // SECURITY: userId is extracted from JWT token ONLY to prevent IDOR
+    Long authenticatedUserId = getCurrentUserId();
+    LoanApplicationDTO created = loanWorkflowService.submitLoan(request, authenticatedUserId);
     return ResponseUtil.created(created, "Loan application submitted successfully");
   }
 

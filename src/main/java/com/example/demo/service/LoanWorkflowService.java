@@ -34,22 +34,21 @@ public class LoanWorkflowService {
   private final LoanEligibilityService loanEligibilityService;
 
   @Transactional
-  public LoanApplicationDTO submitLoan(LoanSubmitRequest request) {
+  public LoanApplicationDTO submitLoan(LoanSubmitRequest request, Long userId) {
     User user =
         userRepository
-            .findById(request.getUserId())
-            .orElseThrow(
-                () -> new RuntimeException("User not found with id: " + request.getUserId()));
+            .findById(userId)
+            .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
 
     // Get user's current tier product (auto-assigns Bronze if not assigned)
-    Product tierProduct = loanEligibilityService.getCurrentTierProduct(request.getUserId());
+    Product tierProduct = loanEligibilityService.getCurrentTierProduct(userId);
     if (tierProduct == null) {
       throw new RuntimeException("No tier product available for user");
     }
 
     // Check credit limit eligibility
-    if (!loanEligibilityService.canApplyForLoan(request.getUserId(), request.getAmount())) {
-      Double remainingLimit = loanEligibilityService.getRemainingCreditLimit(request.getUserId());
+    if (!loanEligibilityService.canApplyForLoan(userId, request.getAmount())) {
+      Double remainingLimit = loanEligibilityService.getRemainingCreditLimit(userId);
       throw new RuntimeException(
           String.format(
               "Loan amount %.2f exceeds remaining credit limit %.2f for %s tier",
@@ -71,16 +70,23 @@ public class LoanWorkflowService {
     }
 
     // Create loan application with SUBMITTED status
+    Double interestRate =
+        request.getInterestRateApplied() != null
+            ? request.getInterestRateApplied()
+            : product.getInterestRate();
+
+    // Calculate total amount to pay (principal + interest) using EMI formula
+    Double totalAmountToPay =
+        calculateTotalAmountToPay(request.getAmount(), interestRate, request.getTenureMonths());
+
     LoanApplication loanApplication =
         LoanApplication.builder()
             .user(user)
             .product(product)
             .amount(request.getAmount())
             .tenureMonths(request.getTenureMonths())
-            .interestRateApplied(
-                request.getInterestRateApplied() != null
-                    ? request.getInterestRateApplied()
-                    : product.getInterestRate())
+            .interestRateApplied(interestRate)
+            .totalAmountToPay(totalAmountToPay)
             .currentStatus(LoanStatus.SUBMITTED.name())
             .isPaid(false)
             .build();
@@ -88,7 +94,7 @@ public class LoanWorkflowService {
     LoanApplication saved = loanApplicationRepository.save(loanApplication);
 
     // Update user's used amount
-    loanEligibilityService.updateUsedAmount(request.getUserId(), request.getAmount());
+    loanEligibilityService.updateUsedAmount(userId, request.getAmount());
 
     // Create history entry for SUBMIT action
     createHistoryEntry(
@@ -417,9 +423,40 @@ public class LoanWorkflowService {
         .amount(loanApplication.getAmount())
         .tenureMonths(loanApplication.getTenureMonths())
         .interestRateApplied(loanApplication.getInterestRateApplied())
+        .totalAmountToPay(loanApplication.getTotalAmountToPay())
         .currentStatus(loanApplication.getCurrentStatus())
         .createdAt(loanApplication.getCreatedAt())
         .updatedAt(loanApplication.getUpdatedAt())
         .build();
+  }
+
+  /**
+   * Calculate total amount to pay (principal + interest) using EMI formula.
+   *
+   * @param principal the loan amount
+   * @param annualInterestRate the annual interest rate (e.g., 12.0 for 12%)
+   * @param tenureMonths the tenure in months
+   * @return total amount to be paid
+   */
+  private Double calculateTotalAmountToPay(
+      Double principal, Double annualInterestRate, Integer tenureMonths) {
+    if (principal == null || annualInterestRate == null || tenureMonths == null) {
+      return principal; // Return principal if any value is missing
+    }
+
+    if (annualInterestRate == 0 || tenureMonths == 0) {
+      return principal; // No interest or tenure
+    }
+
+    // Convert annual interest rate to monthly rate
+    double monthlyRate = (annualInterestRate / 12) / 100;
+
+    // Calculate EMI using formula: EMI = [P × r × (1+r)^n] / [(1+r)^n - 1]
+    double emi =
+        (principal * monthlyRate * Math.pow(1 + monthlyRate, tenureMonths))
+            / (Math.pow(1 + monthlyRate, tenureMonths) - 1);
+
+    // Total amount = EMI × number of months
+    return emi * tenureMonths;
   }
 }

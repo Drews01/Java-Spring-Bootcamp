@@ -41,16 +41,19 @@ After payment, the system checks if user qualifies for an upgrade:
 ### Submit Loan Application
 ```
 POST /api/loan-workflow/submit
+Authorization: Bearer {your-jwt-token}
 ```
 **Request Body:**
 ```json
 {
-  "userId": 5,
   "amount": 5000000,
   "tenureMonths": 12
 }
 ```
-- `productId` is optional - uses user's tier product if not specified
+**Notes:**
+- `userId` is automatically extracted from the JWT token (prevents security issues)
+- `productId` is optional - uses user's tier product if not specified  
+- `interestRateApplied` is optional - uses product's rate if not specified
 - System validates credit limit before accepting
 
 ### Mark Loan as Paid
@@ -108,18 +111,19 @@ Authorization: Bearer {token}
 Content-Type: application/json
 
 {
-  "userId": 5,
   "amount": 5000000,
   "tenureMonths": 12
 }
 ```
-Expected: Loan created with Bronze tier product.
+Expected: Loan created with Bronze tier product for the authenticated user.
 
-#### Step 3: Check Eligibility
+#### Step 3: Check Eligibility  
 ```
-GET http://localhost:8081/api/loan-eligibility/user/5
+GET http://localhost:8081/api/loan-eligibility/user/{your-user-id}
 Authorization: Bearer {token}
 ```
+**Note:** You can also get eligibility for the currently authenticated user.
+
 Expected: Shows remaining limit = 5,000,000 (10M - 5M used)
 
 #### Step 4: Try to Exceed Limit
@@ -129,7 +133,6 @@ Authorization: Bearer {token}
 Content-Type: application/json
 
 {
-  "userId": 5,
   "amount": 6000000,
   "tenureMonths": 12
 }
@@ -149,7 +152,7 @@ Expected: Loan marked as PAID, credit limit reset.
 #### Step 7: Verify Tier Upgrade
 After paying enough loans (15M for Silver), check eligibility again:
 ```
-GET http://localhost:8081/api/loan-eligibility/user/5
+GET http://localhost:8081/api/loan-eligibility/user/{your-user-id}
 ```
 Expected: currentTier = "Silver Loan Product"
 

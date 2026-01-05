@@ -17,6 +17,7 @@ public class LoanApplicationDTO {
   private Double amount;
   private Integer tenureMonths;
   private Double interestRateApplied;
+  private Double totalAmountToPay; // Total repayment amount (principal + interest)
   private String currentStatus;
   private LocalDateTime createdAt;
   private LocalDateTime updatedAt;

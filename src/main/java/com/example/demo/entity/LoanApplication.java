@@ -37,6 +37,9 @@ public class LoanApplication {
   @Column(name = "interest_rate_applied", nullable = false)
   private Double interestRateApplied;
 
+  @Column(name = "total_amount_to_pay")
+  private Double totalAmountToPay; // Total amount to be paid (principal + interest)
+
   @Column(name = "current_status", nullable = false, length = 50)
   private String currentStatus;
 

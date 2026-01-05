@@ -10,9 +10,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class LoanSubmitRequest {
-  private Long userId;
-  private Long productId;
+  // userId removed - MUST be extracted from JWT token to prevent IDOR
+  private Long productId; // Optional - uses tier product if not specified
   private Double amount;
   private Integer tenureMonths;
-  private Double interestRateApplied;
+  private Double interestRateApplied; // Optional - uses product's rate if not specified
 }
