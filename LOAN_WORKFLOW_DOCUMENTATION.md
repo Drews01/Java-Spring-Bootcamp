@@ -576,3 +576,107 @@ The `userId` field has been **removed** from the loan submission request body:
 ```
 
 The user ID is now automatically extracted from the JWT token, preventing **Insecure Direct Object Reference (IDOR)** vulnerabilities where users could submit loans on behalf of other users.
+
+### 7.4 Email Notifications for Loan Disbursement
+
+Users now receive **automated email notifications** when their loan is disbursed, in addition to the existing in-app notifications.
+
+#### Features:
+- ✅ **Professional HTML email template** with loan details
+- ✅ **Automatic delivery** when loan status changes to `DISBURSED`
+- ✅ **Error handling** - email failures do not block the workflow
+- ✅ **Detailed logging** for troubleshooting
+
+#### Email Content:
+When a loan is disbursed, the user receives an email containing:
+- User's name
+- Loan ID for reference
+- Disbursed amount
+- Confirmation message
+- Next steps information
+
+#### Implementation Details:
+
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| Interface | `EmailService.sendLoanDisbursementEmail()` | Method signature |
+| Implementation | `EmailServiceImpl.sendLoanDisbursementEmail()` | Sends HTML email using JavaMailSender |
+| Integration | `LoanWorkflowService.sendNotifications()` | Triggers email when status changes to DISBURSED |
+| Email Configuration | `application.yml` | SMTP settings (see `forgot_password.md`) |
+
+#### Email Template Features:
+```
+- Responsive design
+- Professional styling with gradient header
+- Clear loan information display
+- Branding consistent with loan platform
+- Call-to-action section
+```
+
+#### Error Handling:
+The email sending is wrapped in a try-catch block to ensure:
+- ❌ Email failures **do not prevent** loan disbursement
+- ✅ Errors are **logged** for troubleshooting
+- ✅ In-app notifications are **always created** regardless of email status
+
+#### Testing Email Notifications:
+
+> [!NOTE]
+> Email configuration requires SMTP settings. See `forgot_password.md` for detailed setup instructions using Mailtrap.
+
+**Step 1: Configure Email Settings**
+Add these to `application.yml`:
+```yaml
+spring:
+  mail:
+    host: sandbox.smtp.mailtrap.io
+    port: 2525
+    username: your-mailtrap-username
+    password: your-mailtrap-password
+```
+
+**Step 2: Test the Flow**
+```bash
+# 1. Submit a loan
+POST /api/loan-workflow/submit
+Body: { "productId": 1, "amount": 5000000, "tenureMonths": 12 }
+
+# 2. Progress through workflow to DISBURSED
+# (COMMENT → FORWARD_TO_MANAGER → APPROVE → DISBURSE)
+
+# 3. When DISBURSE action is performed:
+POST /api/loan-workflow/action
+Body: {
+  "loanApplicationId": 1,
+  "action": "DISBURSE"
+}
+
+# 4. Check your email inbox (Mailtrap) for the disbursement notification
+```
+
+**Expected Email Response:**
+- Subject: `Your Loan Has Been Disbursed - Loan #[ID]`
+- To: User's email from JWT token
+- Content: Professional HTML email with loan details
+
+**Log Output:**
+```
+INFO: Disbursement email sent to user@example.com for loan 1
+```
+
+**Error Scenario (email service unavailable):**
+```
+ERROR: Failed to send disbursement email for loan 1: Connection refused
+INFO: In-app notification created successfully
+```
+
+#### Notification Comparison:
+
+| Notification Type | Always Sent | User Action Required | Persisted |
+|------------------|-------------|----------------------|-----------|
+| **In-App** | ✅ Yes | View in notifications API | Yes, in database |
+| **Email** | ⚠️ Best effort | Check email inbox | No, sent once |
+
+> [!IMPORTANT]
+> Both notification types are triggered on disbursement, but only in-app notifications are guaranteed. Email delivery depends on SMTP configuration and network availability.
+

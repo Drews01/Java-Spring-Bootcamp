@@ -194,7 +194,8 @@ public class LoanEligibilityService {
       return;
     }
 
-    Double totalPaid = loanApplicationRepository.findTotalPaidAmountByUserId(userId);
+    // Use the value already stored in user_products table (single source of truth)
+    Double totalPaid = currentUserProduct.getTotalPaidAmount();
     if (totalPaid == null) totalPaid = 0.0;
 
     if (totalPaid >= currentProduct.getUpgradeThreshold()) {

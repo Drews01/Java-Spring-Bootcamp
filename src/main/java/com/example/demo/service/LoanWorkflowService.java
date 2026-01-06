@@ -33,6 +33,7 @@ public class LoanWorkflowService {
   private final AccessControlService accessControl;
   private final LoanEligibilityService loanEligibilityService;
   private final UserProfileService userProfileService;
+  private final EmailService emailService;
 
   @Transactional
   public LoanApplicationDTO submitLoan(LoanSubmitRequest request, Long userId) {
@@ -374,6 +375,7 @@ public class LoanWorkflowService {
 
       // APPROVED_WAITING_DISBURSEMENT -> DISBURSED: Notify customer
       if ("APPROVED_WAITING_DISBURSEMENT".equals(fromStatus) && "DISBURSED".equals(toStatus)) {
+        // Create in-app notification
         notificationService.createNotification(
             com.example.demo.dto.NotificationDTO.builder()
                 .userId(loanApplication.getUser().getId())
@@ -382,6 +384,26 @@ public class LoanWorkflowService {
                 .channel("IN_APP")
                 .message("Your loan has been disbursed")
                 .build());
+
+        // Send email notification
+        try {
+          User user = loanApplication.getUser();
+          emailService.sendLoanDisbursementEmail(
+              user.getEmail(),
+              user.getUsername(),
+              loanApplication.getLoanApplicationId(),
+              loanApplication.getAmount());
+          log.info(
+              "Disbursement email sent to {} for loan {}",
+              user.getEmail(),
+              loanApplication.getLoanApplicationId());
+        } catch (Exception emailError) {
+          // Log error but don't fail the workflow
+          log.error(
+              "Failed to send disbursement email for loan {}: {}",
+              loanApplication.getLoanApplicationId(),
+              emailError.getMessage());
+        }
       }
     } catch (Exception e) {
       log.error(
