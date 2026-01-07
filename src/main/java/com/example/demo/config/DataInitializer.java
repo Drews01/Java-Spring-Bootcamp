@@ -22,271 +22,528 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class DataInitializer implements CommandLineRunner {
 
-  private final RoleRepository roleRepository;
-  private final UserRepository userRepository;
-  private final ProductRepository productRepository;
-  private final MenuRepository menuRepository;
-  private final RoleMenuRepository roleMenuRepository;
-  private final PasswordEncoder passwordEncoder;
+    private final RoleRepository roleRepository;
+    private final UserRepository userRepository;
+    private final ProductRepository productRepository;
+    private final MenuRepository menuRepository;
+    private final RoleMenuRepository roleMenuRepository;
+    private final PasswordEncoder passwordEncoder;
 
-  @Override
-  public void run(String... args) throws Exception {
-    cleanupDuplicateRoles();
+    @Override
+    public void run(String... args) throws Exception {
+        cleanupDuplicateRoles();
+        cleanupDeprecatedMenus();
 
-    Role adminRole = findOrCreateRole("ADMIN");
-    Role userRole = findOrCreateRole("USER");
-    Role backOfficeRole = findOrCreateRole("BACK_OFFICE");
-    Role branchManagerRole = findOrCreateRole("BRANCH_MANAGER");
-    Role marketingRole = findOrCreateRole("MARKETING");
+        // ============================================================
+        // ROLES INITIALIZATION
+        // ============================================================
+        Role adminRole = findOrCreateRole("ADMIN");
+        Role userRole = findOrCreateRole("USER");
+        Role backOfficeRole = findOrCreateRole("BACK_OFFICE");
+        Role branchManagerRole = findOrCreateRole("BRANCH_MANAGER");
+        Role marketingRole = findOrCreateRole("MARKETING");
 
-    // Initialize Menus
-    Menu loanSubmitMenu =
-        findOrCreateMenu("LOAN_SUBMIT", "Submit Loan", "/api/loan-workflow/submit");
-    Menu loanReviewMenu =
-        findOrCreateMenu("LOAN_REVIEW", "Review Loan", "/api/loan-workflow/queue/marketing");
-    Menu loanApproveMenu =
-        findOrCreateMenu("LOAN_APPROVE", "Approve Loan", "/api/loan-workflow/queue/branch-manager");
-    Menu loanDisburseMenu =
-        findOrCreateMenu("LOAN_DISBURSE", "Disburse Loan", "/api/loan-workflow/queue/back-office");
+        // ============================================================
+        // MENUS INITIALIZATION - ALL ENDPOINTS
+        // ============================================================
 
-    // New RBAC Master Data Menus
-    Menu userRead = findOrCreateMenu("USER_READ", "Read Users", "/api/users/**");
-    Menu userCreate = findOrCreateMenu("USER_CREATE", "Create User", "/api/users");
-    Menu userUpdate = findOrCreateMenu("USER_UPDATE", "Update User", "/api/users/**");
-    Menu userDelete = findOrCreateMenu("USER_DELETE", "Delete User", "/api/users/**");
+        // -------------------- ADMIN MODULE --------------------
+        Menu adminDashboard = findOrCreateMenu("ADMIN_DASHBOARD", "Admin Dashboard", "/api/admin/dashboard");
+        Menu adminSystemLogs = findOrCreateMenu("ADMIN_SYSTEM_LOGS", "Admin System Logs", "/api/admin/system-logs");
 
-    Menu roleRead = findOrCreateMenu("ROLE_READ", "Read Roles", "/api/roles/**");
-    Menu roleAssign = findOrCreateMenu("ROLE_ASSIGN", "Assign Role", "/api/roles/assign");
-    Menu roleManage = findOrCreateMenu("ROLE_MANAGE", "Manage Roles", "/api/roles/**");
+        // -------------------- USER MANAGEMENT (ADMIN) --------------------
+        Menu userList = findOrCreateMenu("USER_LIST", "List All Users", "/api/users");
+        Menu userGet = findOrCreateMenu("USER_GET", "Get User by ID", "/api/users/*");
+        Menu userCreate = findOrCreateMenu("USER_CREATE", "Create User", "/api/users");
+        Menu userUpdate = findOrCreateMenu("USER_UPDATE", "Update User", "/api/users/*");
+        Menu userDelete = findOrCreateMenu("USER_DELETE", "Delete User", "/api/users/*");
+        Menu adminUserList = findOrCreateMenu("ADMIN_USER_LIST", "Admin User List", "/api/users/admin/list");
+        Menu adminUserCreate = findOrCreateMenu("ADMIN_USER_CREATE", "Admin Create User", "/api/users/admin/create");
+        Menu adminUserStatus = findOrCreateMenu("ADMIN_USER_STATUS", "Admin User Status", "/api/users/admin/*/status");
+        Menu adminUserRoles = findOrCreateMenu("ADMIN_USER_ROLES", "Admin User Roles", "/api/users/admin/*/roles");
 
-    Menu loanCreate =
-        findOrCreateMenu("LOAN_CREATE", "Create Loan Request", "/api/loan-workflow/submit");
-    // Renamed generic action menu to be shared across roles
-    Menu loanAction =
-        findOrCreateMenu("LOAN_ACTION", "Perform Loan Action", "/api/loan-workflow/action");
+        // -------------------- ROLE MANAGEMENT (ADMIN) --------------------
+        Menu roleList = findOrCreateMenu("ROLE_LIST", "List All Roles", "/api/roles");
+        Menu roleCreate = findOrCreateMenu("ROLE_CREATE", "Create Role", "/api/roles");
+        Menu roleDelete = findOrCreateMenu("ROLE_DELETE", "Delete Role", "/api/roles/*");
 
-    Menu productRead = findOrCreateMenu("PRODUCT_READ", "Read Products", "/api/products/**");
-    Menu productManage = findOrCreateMenu("PRODUCT_MANAGE", "Manage Products", "/api/products/**");
+        // -------------------- MENU MANAGEMENT (ADMIN) --------------------
+        Menu menuList = findOrCreateMenu("MENU_LIST", "List All Menus", "/api/menus");
+        Menu menuGet = findOrCreateMenu("MENU_GET", "Get Menu by ID", "/api/menus/*");
+        Menu menuCreate = findOrCreateMenu("MENU_CREATE", "Create Menu", "/api/menus");
+        Menu menuUpdate = findOrCreateMenu("MENU_UPDATE", "Update Menu", "/api/menus/*");
+        Menu menuDelete = findOrCreateMenu("MENU_DELETE", "Delete Menu", "/api/menus/*");
 
-    Menu branchRead =
-        findOrCreateMenu(
-            "BRANCH_READ", "Branch Reports", "/api/loan-workflow/queue/branch-manager");
+        // -------------------- ROLE-MENU MANAGEMENT (ADMIN) --------------------
+        Menu roleMenuAssign = findOrCreateMenu("ROLE_MENU_ASSIGN", "Assign Menu to Role", "/api/role-menus");
+        Menu roleMenuGetByRole = findOrCreateMenu("ROLE_MENU_BY_ROLE", "Get Menus by Role", "/api/role-menus/role/*");
+        Menu roleMenuGetByMenu = findOrCreateMenu("ROLE_MENU_BY_MENU", "Get Roles by Menu", "/api/role-menus/menu/*");
+        Menu roleMenuRemove = findOrCreateMenu("ROLE_MENU_REMOVE", "Remove Menu from Role", "/api/role-menus");
 
-    Menu profileRead = findOrCreateMenu("PROFILE_READ", "Read Profile", "/api/user-profiles/**");
-    Menu profileUpdate =
-        findOrCreateMenu("PROFILE_UPDATE", "Update Profile", "/api/user-profiles/**");
+        // -------------------- LOAN WORKFLOW --------------------
+        Menu loanSubmit = findOrCreateMenu("LOAN_SUBMIT", "Submit Loan", "/api/loan-workflow/submit");
+        Menu loanAction = findOrCreateMenu("LOAN_ACTION", "Perform Loan Action", "/api/loan-workflow/action");
+        Menu loanAllowedActions = findOrCreateMenu(
+                "LOAN_ALLOWED_ACTIONS", "Get Allowed Actions", "/api/loan-workflow/*/allowed-actions");
+        Menu loanQueueMarketing = findOrCreateMenu(
+                "LOAN_QUEUE_MARKETING", "Marketing Queue", "/api/loan-workflow/queue/marketing");
+        Menu loanQueueBranchManager = findOrCreateMenu(
+                "LOAN_QUEUE_BRANCH_MANAGER",
+                "Branch Manager Queue",
+                "/api/loan-workflow/queue/branch-manager");
+        Menu loanQueueBackOffice = findOrCreateMenu(
+                "LOAN_QUEUE_BACK_OFFICE", "Back Office Queue", "/api/loan-workflow/queue/back-office");
 
-    // Role-Specific Functional Modules
-    Menu marketingModule =
-        findOrCreateMenu("MARKETING_MODULE", "Marketing Dashboard", "/api/marketing/**");
-    Menu managerModule =
-        findOrCreateMenu("MANAGER_MODULE", "Branch Manager Dashboard", "/api/branch-manager/**");
-    Menu backOfficeModule =
-        findOrCreateMenu("BACKOFFICE_MODULE", "Back Office Dashboard", "/api/back-office/**");
-    Menu adminModule = findOrCreateMenu("ADMIN_MODULE", "Admin Dashboard", "/api/admin/**");
+        // -------------------- LOAN APPLICATION (ADMIN/STAFF) --------------------
+        Menu loanAppCreate = findOrCreateMenu("LOAN_APP_CREATE", "Create Loan Application", "/api/loan-applications");
+        Menu loanAppGet = findOrCreateMenu("LOAN_APP_GET", "Get Loan Application", "/api/loan-applications/*");
+        Menu loanAppByUser = findOrCreateMenu(
+                "LOAN_APP_BY_USER", "Get Loan Apps by User", "/api/loan-applications/user/*");
+        Menu loanAppByStatus = findOrCreateMenu(
+                "LOAN_APP_BY_STATUS", "Get Loan Apps by Status", "/api/loan-applications/status/*");
+        Menu loanAppList = findOrCreateMenu("LOAN_APP_LIST", "List All Loan Applications", "/api/loan-applications");
+        Menu loanAppUpdate = findOrCreateMenu("LOAN_APP_UPDATE", "Update Loan Application", "/api/loan-applications/*");
+        Menu loanAppDelete = findOrCreateMenu("LOAN_APP_DELETE", "Delete Loan Application", "/api/loan-applications/*");
 
-    findOrCreateMenu("DASHBOARD", "User Dashboard", "/api/dashboard/**");
+        // -------------------- LOAN HISTORY (ADMIN/STAFF) --------------------
+        Menu loanHistoryCreate = findOrCreateMenu("LOAN_HISTORY_CREATE", "Create Loan History", "/api/loan-history");
+        Menu loanHistoryGet = findOrCreateMenu("LOAN_HISTORY_GET", "Get Loan History", "/api/loan-history/*");
+        Menu loanHistoryByLoan = findOrCreateMenu("LOAN_HISTORY_BY_LOAN", "Get History by Loan",
+                "/api/loan-history/loan/*");
+        Menu loanHistoryList = findOrCreateMenu("LOAN_HISTORY_LIST", "List All Loan Histories", "/api/loan-history");
+        Menu loanHistoryDelete = findOrCreateMenu("LOAN_HISTORY_DELETE", "Delete Loan History", "/api/loan-history/*");
 
-    // Initialize Role-Menu mappings
-    // USER (Customer)
-    mapRoleToMenu(userRole, loanCreate);
-    mapRoleToMenu(userRole, productRead);
-    mapRoleToMenu(userRole, profileRead);
-    mapRoleToMenu(userRole, profileUpdate);
-    mapRoleToMenu(userRole, loanSubmitMenu);
+        // -------------------- PRODUCT MANAGEMENT --------------------
+        Menu productCreate = findOrCreateMenu("PRODUCT_CREATE", "Create Product", "/api/products");
+        Menu productList = findOrCreateMenu("PRODUCT_LIST", "List All Products", "/api/products");
+        Menu productActive = findOrCreateMenu("PRODUCT_ACTIVE", "List Active Products", "/api/products/active");
+        Menu productByCode = findOrCreateMenu("PRODUCT_BY_CODE", "Get Product by Code", "/api/products/code/*");
+        Menu productUpdateStatus = findOrCreateMenu(
+                "PRODUCT_UPDATE_STATUS", "Update Product Status", "/api/products/*/status");
+        Menu productDelete = findOrCreateMenu("PRODUCT_DELETE", "Delete Product", "/api/products/*");
 
-    // MARKETING
-    mapRoleToMenu(marketingRole, loanReviewMenu);
-    mapRoleToMenu(marketingRole, marketingModule);
-    mapRoleToMenu(marketingRole, loanAction); // Added common action access
+        // -------------------- USER PRODUCT (USER) --------------------
+        Menu userProductCreate = findOrCreateMenu("USER_PRODUCT_CREATE", "Create User Product", "/api/user-products");
+        Menu userProductGet = findOrCreateMenu("USER_PRODUCT_GET", "Get User Product", "/api/user-products/*");
+        Menu userProductByUser = findOrCreateMenu(
+                "USER_PRODUCT_BY_USER", "Get User Products by User", "/api/user-products/user/*");
+        Menu userProductActiveByUser = findOrCreateMenu(
+                "USER_PRODUCT_ACTIVE", "Get Active User Products", "/api/user-products/user/*/active");
+        Menu userProductList = findOrCreateMenu("USER_PRODUCT_LIST", "List All User Products", "/api/user-products");
+        Menu userProductUpdate = findOrCreateMenu("USER_PRODUCT_UPDATE", "Update User Product", "/api/user-products/*");
+        Menu userProductDelete = findOrCreateMenu("USER_PRODUCT_DELETE", "Delete User Product", "/api/user-products/*");
 
-    // BRANCH MANAGER
-    mapRoleToMenu(branchManagerRole, loanApproveMenu);
-    mapRoleToMenu(branchManagerRole, loanAction); // Shared action access
-    mapRoleToMenu(branchManagerRole, branchRead);
-    mapRoleToMenu(branchManagerRole, managerModule);
+        // -------------------- USER PROFILE --------------------
+        Menu profileCreate = findOrCreateMenu("PROFILE_CREATE", "Create/Update Profile", "/api/user-profiles");
+        Menu profileMe = findOrCreateMenu("PROFILE_ME", "Get My Profile", "/api/user-profiles/me");
+        Menu profileList = findOrCreateMenu("PROFILE_LIST", "List All Profiles", "/api/user-profiles");
+        Menu profileUpdate = findOrCreateMenu("PROFILE_UPDATE", "Update My Profile", "/api/user-profiles");
+        Menu profileDelete = findOrCreateMenu("PROFILE_DELETE", "Delete My Profile", "/api/user-profiles");
 
-    // BACK OFFICE
-    mapRoleToMenu(backOfficeRole, loanDisburseMenu);
-    mapRoleToMenu(backOfficeRole, backOfficeModule);
-    mapRoleToMenu(backOfficeRole, loanAction); // Added common action access
+        // -------------------- NOTIFICATION --------------------
+        Menu notificationCreate = findOrCreateMenu("NOTIFICATION_CREATE", "Create Notification", "/api/notifications");
+        Menu notificationGet = findOrCreateMenu("NOTIFICATION_GET", "Get Notification", "/api/notifications/*");
+        Menu notificationByUser = findOrCreateMenu(
+                "NOTIFICATION_BY_USER", "Get Notifications by User", "/api/notifications/user/*");
+        Menu notificationUnreadByUser = findOrCreateMenu(
+                "NOTIFICATION_UNREAD", "Get Unread Notifications", "/api/notifications/user/*/unread");
+        Menu notificationUnreadCount = findOrCreateMenu(
+                "NOTIFICATION_UNREAD_COUNT",
+                "Get Unread Count",
+                "/api/notifications/user/*/unread/count");
+        Menu notificationList = findOrCreateMenu("NOTIFICATION_LIST", "List All Notifications", "/api/notifications");
+        Menu notificationMarkRead = findOrCreateMenu(
+                "NOTIFICATION_MARK_READ", "Mark Notification as Read", "/api/notifications/*/read");
+        Menu notificationDelete = findOrCreateMenu("NOTIFICATION_DELETE", "Delete Notification",
+                "/api/notifications/*");
 
-    // ADMIN (Full Access)
-    mapRoleToMenu(adminRole, adminModule);
-    mapRoleToMenu(adminRole, userRead);
-    mapRoleToMenu(adminRole, userCreate);
-    mapRoleToMenu(adminRole, userUpdate);
-    mapRoleToMenu(adminRole, userDelete);
-    mapRoleToMenu(adminRole, roleRead);
-    mapRoleToMenu(adminRole, roleAssign);
-    mapRoleToMenu(adminRole, roleManage);
-    mapRoleToMenu(adminRole, productManage);
+        // -------------------- RBAC TEST ENDPOINTS --------------------
+        Menu rbacTestMarketing = findOrCreateMenu("RBAC_TEST_MARKETING", "RBAC Test Marketing",
+                "/api/test-rbac/marketing");
+        Menu rbacTestBranchManager = findOrCreateMenu(
+                "RBAC_TEST_BRANCH_MANAGER",
+                "RBAC Test Branch Manager",
+                "/api/test-rbac/branch-manager");
+        Menu rbacTestBackOffice = findOrCreateMenu(
+                "RBAC_TEST_BACK_OFFICE", "RBAC Test Back Office", "/api/test-rbac/back-office");
+        Menu rbacTestAdmin = findOrCreateMenu("RBAC_TEST_ADMIN", "RBAC Test Admin", "/api/test-rbac/admin-only");
 
-    // Initialize test users
-    createTestUser("admin", "admin@example.com", "admin123", adminRole, userRole);
-    createTestUser("marketing", "marketing@example.com", "pass123", marketingRole);
-    createTestUser("manager", "manager@example.com", "pass123", branchManagerRole);
-    createTestUser("backoffice", "backoffice@example.com", "pass123", backOfficeRole);
-    createTestUser("user", "user@example.com", "pass123", userRole);
+        // -------------------- RBAC MANAGEMENT API --------------------
+        Menu rbacRolesList = findOrCreateMenu("RBAC_ROLES_LIST", "List Roles Summary", "/api/rbac/roles");
+        Menu rbacRoleAccess = findOrCreateMenu("RBAC_ROLE_ACCESS", "Get/Update Role Access",
+                "/api/rbac/roles/*/access");
+        Menu rbacCategories = findOrCreateMenu("RBAC_CATEGORIES", "Get Menu Categories", "/api/rbac/categories");
 
-    // Initialize tier-based loan products (Bronze, Silver, Gold)
-    initializeTierProducts();
+        // -------------------- UNIFIED STAFF DASHBOARD --------------------
+        Menu staffDashboard = findOrCreateMenu("STAFF_DASHBOARD", "Staff Dashboard", "/api/staff/dashboard");
+        Menu staffQueue = findOrCreateMenu("STAFF_QUEUE", "Staff Queue", "/api/staff/queue");
 
-    System.out.println("✓ Data initialization completed!");
-    System.out.println("✓ Roles created: ADMIN, USER, BACK_OFFICE, BRANCH_MANAGER, MARKETING");
-    System.out.println("✓ Menus & RBAC seeded");
-    System.out.println("✓ Tier products created: BRONZE, SILVER, GOLD");
-  }
+        // ============================================================
+        // ROLE-MENU MAPPINGS
+        // ============================================================
 
-  private void initializeTierProducts() {
-    // Bronze Tier - Entry level
-    findOrCreateTierProduct(
-        "TIER-BRONZE",
-        "Bronze Loan Product",
-        8.0, // 8% interest rate
-        10000000.0, // Credit limit: 10 million
-        15000000.0, // Upgrade threshold: 15 million paid
-        1 // Tier order
-        );
+        // -------------------- USER (CUSTOMER) ROLE --------------------
+        mapRoleToMenu(userRole, loanSubmit);
+        mapRoleToMenu(userRole, productList);
+        mapRoleToMenu(userRole, productActive);
+        mapRoleToMenu(userRole, productByCode);
+        mapRoleToMenu(userRole, profileCreate);
+        mapRoleToMenu(userRole, profileMe);
+        mapRoleToMenu(userRole, profileUpdate);
+        mapRoleToMenu(userRole, profileDelete);
+        mapRoleToMenu(userRole, notificationByUser);
+        mapRoleToMenu(userRole, notificationUnreadByUser);
+        mapRoleToMenu(userRole, notificationUnreadCount);
+        mapRoleToMenu(userRole, notificationMarkRead);
+        mapRoleToMenu(userRole, userProductByUser);
+        mapRoleToMenu(userRole, userProductActiveByUser);
 
-    // Silver Tier - Mid level
-    findOrCreateTierProduct(
-        "TIER-SILVER",
-        "Silver Loan Product",
-        7.0, // 7% interest rate
-        25000000.0, // Credit limit: 25 million
-        50000000.0, // Upgrade threshold: 50 million paid
-        2 // Tier order
-        );
+        // -------------------- MARKETING ROLE --------------------
+        mapRoleToMenu(marketingRole, loanQueueMarketing);
+        mapRoleToMenu(marketingRole, loanAction);
+        mapRoleToMenu(marketingRole, loanAllowedActions);
+        mapRoleToMenu(marketingRole, loanAppGet);
+        mapRoleToMenu(marketingRole, loanAppByStatus);
+        mapRoleToMenu(marketingRole, loanHistoryGet);
+        mapRoleToMenu(marketingRole, loanHistoryByLoan);
+        mapRoleToMenu(marketingRole, rbacTestMarketing);
+        mapRoleToMenu(marketingRole, productList);
+        mapRoleToMenu(marketingRole, productActive);
 
-    // Gold Tier - Top level
-    findOrCreateTierProduct(
-        "TIER-GOLD",
-        "Gold Loan Product",
-        6.0, // 6% interest rate
-        50000000.0, // Credit limit: 50 million
-        null, // No upgrade from Gold
-        3 // Tier order
-        );
-  }
+        // -------------------- BRANCH MANAGER ROLE --------------------
+        mapRoleToMenu(branchManagerRole, loanQueueBranchManager);
+        mapRoleToMenu(branchManagerRole, loanAction);
+        mapRoleToMenu(branchManagerRole, loanAllowedActions);
+        mapRoleToMenu(branchManagerRole, loanAppGet);
+        mapRoleToMenu(branchManagerRole, loanAppByStatus);
+        mapRoleToMenu(branchManagerRole, loanHistoryGet);
+        mapRoleToMenu(branchManagerRole, loanHistoryByLoan);
+        mapRoleToMenu(branchManagerRole, rbacTestBranchManager);
+        mapRoleToMenu(branchManagerRole, productList);
+        mapRoleToMenu(branchManagerRole, productActive);
 
-  private Product findOrCreateTierProduct(
-      String code,
-      String name,
-      Double interestRate,
-      Double creditLimit,
-      Double upgradeThreshold,
-      Integer tierOrder) {
-    return productRepository
-        .findByCode(code)
-        .orElseGet(
-            () -> {
-              Product product =
-                  Product.builder()
-                      .code(code)
-                      .name(name)
-                      .interestRate(interestRate)
-                      .interestRateType("FIXED")
-                      .minAmount(1000000.0) // Min: 1 million
-                      .maxAmount(creditLimit) // Max equals credit limit
-                      .minTenureMonths(3)
-                      .maxTenureMonths(36)
-                      .tierOrder(tierOrder)
-                      .creditLimit(creditLimit)
-                      .upgradeThreshold(upgradeThreshold)
-                      .isActive(true)
-                      .build();
-              System.out.println("✓ Created tier product: " + name);
-              return productRepository.save(product);
-            });
-  }
+        // -------------------- BACK OFFICE ROLE --------------------
+        mapRoleToMenu(backOfficeRole, loanQueueBackOffice);
+        mapRoleToMenu(backOfficeRole, loanAction);
+        mapRoleToMenu(backOfficeRole, loanAllowedActions);
+        mapRoleToMenu(backOfficeRole, loanAppGet);
+        mapRoleToMenu(backOfficeRole, loanAppByStatus);
+        mapRoleToMenu(backOfficeRole, loanHistoryGet);
+        mapRoleToMenu(backOfficeRole, loanHistoryByLoan);
+        mapRoleToMenu(backOfficeRole, rbacTestBackOffice);
+        mapRoleToMenu(backOfficeRole, productList);
+        mapRoleToMenu(backOfficeRole, productActive);
 
-  private Role findOrCreateRole(String name) {
-    return roleRepository
-        .findByName(name)
-        .orElseGet(() -> roleRepository.save(Role.builder().name(name).build()));
-  }
+        // -------------------- ADMIN ROLE (FULL ACCESS) --------------------
+        // Admin Dashboard
+        mapRoleToMenu(adminRole, adminDashboard);
+        mapRoleToMenu(adminRole, adminSystemLogs);
 
-  private Menu findOrCreateMenu(String code, String name, String urlPattern) {
-    return menuRepository
-        .findByCode(code)
-        .orElseGet(
-            () ->
-                menuRepository.save(
-                    Menu.builder().code(code).name(name).urlPattern(urlPattern).build()));
-  }
+        // User Management
+        mapRoleToMenu(adminRole, userList);
+        mapRoleToMenu(adminRole, userGet);
+        mapRoleToMenu(adminRole, userCreate);
+        mapRoleToMenu(adminRole, userUpdate);
+        mapRoleToMenu(adminRole, userDelete);
+        mapRoleToMenu(adminRole, adminUserList);
+        mapRoleToMenu(adminRole, adminUserCreate);
+        mapRoleToMenu(adminRole, adminUserStatus);
+        mapRoleToMenu(adminRole, adminUserRoles);
 
-  private void mapRoleToMenu(Role role, Menu menu) {
-    if (!roleMenuRepository.existsById(
-        new com.example.demo.entity.RoleMenuId(role.getId(), menu.getMenuId()))) {
-      roleMenuRepository.save(
-          RoleMenu.builder().roleId(role.getId()).menuId(menu.getMenuId()).build());
+        // Role Management
+        mapRoleToMenu(adminRole, roleList);
+        mapRoleToMenu(adminRole, roleCreate);
+        mapRoleToMenu(adminRole, roleDelete);
+
+        // Menu Management
+        mapRoleToMenu(adminRole, menuList);
+        mapRoleToMenu(adminRole, menuGet);
+        mapRoleToMenu(adminRole, menuCreate);
+        mapRoleToMenu(adminRole, menuUpdate);
+        mapRoleToMenu(adminRole, menuDelete);
+
+        // Role-Menu Management
+        mapRoleToMenu(adminRole, roleMenuAssign);
+        mapRoleToMenu(adminRole, roleMenuGetByRole);
+        mapRoleToMenu(adminRole, roleMenuGetByMenu);
+        mapRoleToMenu(adminRole, roleMenuRemove);
+
+        // RBAC Management API
+        mapRoleToMenu(adminRole, rbacRolesList);
+        mapRoleToMenu(adminRole, rbacRoleAccess);
+        mapRoleToMenu(adminRole, rbacCategories);
+
+        // Loan Application Management
+        mapRoleToMenu(adminRole, loanAppCreate);
+        mapRoleToMenu(adminRole, loanAppGet);
+        mapRoleToMenu(adminRole, loanAppByUser);
+        mapRoleToMenu(adminRole, loanAppByStatus);
+        mapRoleToMenu(adminRole, loanAppList);
+        mapRoleToMenu(adminRole, loanAppUpdate);
+        mapRoleToMenu(adminRole, loanAppDelete);
+
+        // Loan History Management
+        mapRoleToMenu(adminRole, loanHistoryCreate);
+        mapRoleToMenu(adminRole, loanHistoryGet);
+        mapRoleToMenu(adminRole, loanHistoryByLoan);
+        mapRoleToMenu(adminRole, loanHistoryList);
+        mapRoleToMenu(adminRole, loanHistoryDelete);
+
+        // Product Management
+        mapRoleToMenu(adminRole, productCreate);
+        mapRoleToMenu(adminRole, productList);
+        mapRoleToMenu(adminRole, productActive);
+        mapRoleToMenu(adminRole, productByCode);
+        mapRoleToMenu(adminRole, productUpdateStatus);
+        mapRoleToMenu(adminRole, productDelete);
+
+        // User Product Management
+        mapRoleToMenu(adminRole, userProductCreate);
+        mapRoleToMenu(adminRole, userProductGet);
+        mapRoleToMenu(adminRole, userProductByUser);
+        mapRoleToMenu(adminRole, userProductActiveByUser);
+        mapRoleToMenu(adminRole, userProductList);
+        mapRoleToMenu(adminRole, userProductUpdate);
+        mapRoleToMenu(adminRole, userProductDelete);
+
+        // User Profile Management
+        mapRoleToMenu(adminRole, profileCreate);
+        mapRoleToMenu(adminRole, profileMe);
+        mapRoleToMenu(adminRole, profileList);
+        mapRoleToMenu(adminRole, profileUpdate);
+        mapRoleToMenu(adminRole, profileDelete);
+
+        // Notification Management
+        mapRoleToMenu(adminRole, notificationCreate);
+        mapRoleToMenu(adminRole, notificationGet);
+        mapRoleToMenu(adminRole, notificationByUser);
+        mapRoleToMenu(adminRole, notificationUnreadByUser);
+        mapRoleToMenu(adminRole, notificationUnreadCount);
+        mapRoleToMenu(adminRole, notificationList);
+        mapRoleToMenu(adminRole, notificationMarkRead);
+        mapRoleToMenu(adminRole, notificationDelete);
+
+        // Loan Workflow (Admin has full access)
+        mapRoleToMenu(adminRole, loanSubmit);
+        mapRoleToMenu(adminRole, loanAction);
+        mapRoleToMenu(adminRole, loanAllowedActions);
+        mapRoleToMenu(adminRole, loanQueueMarketing);
+        mapRoleToMenu(adminRole, loanQueueBranchManager);
+        mapRoleToMenu(adminRole, loanQueueBackOffice);
+
+        // RBAC Test
+        mapRoleToMenu(adminRole, rbacTestAdmin);
+        mapRoleToMenu(adminRole, rbacTestMarketing);
+        mapRoleToMenu(adminRole, rbacTestBranchManager);
+        mapRoleToMenu(adminRole, rbacTestBackOffice);
+
+        // Unified Staff Dashboard (accessible by all workflow roles)
+        mapRoleToMenu(adminRole, staffDashboard);
+        mapRoleToMenu(adminRole, staffQueue);
+        mapRoleToMenu(marketingRole, staffDashboard);
+        mapRoleToMenu(marketingRole, staffQueue);
+        mapRoleToMenu(branchManagerRole, staffDashboard);
+        mapRoleToMenu(branchManagerRole, staffQueue);
+        mapRoleToMenu(backOfficeRole, staffDashboard);
+        mapRoleToMenu(backOfficeRole, staffQueue);
+
+        // ============================================================
+        // TEST USERS
+        // ============================================================
+        createTestUser("admin", "admin@example.com", "admin123", adminRole, userRole);
+        createTestUser("marketing", "marketing@example.com", "pass123", marketingRole);
+        createTestUser("manager", "manager@example.com", "pass123", branchManagerRole);
+        createTestUser("backoffice", "backoffice@example.com", "pass123", backOfficeRole);
+        createTestUser("user", "user@example.com", "pass123", userRole);
+
+        // ============================================================
+        // TIER PRODUCTS
+        // ============================================================
+        initializeTierProducts();
+
+        System.out.println("✓ Data initialization completed!");
+        System.out.println("✓ Roles created: ADMIN, USER, BACK_OFFICE, BRANCH_MANAGER, MARKETING");
+        System.out.println("✓ Menus & RBAC seeded with all endpoint mappings");
+        System.out.println("✓ Tier products created: BRONZE, SILVER, GOLD");
     }
-  }
 
-  private void cleanupDuplicateRoles() {
-    mergeRoleIfExists("BACK OFFICE", "BACK_OFFICE");
-    mergeRoleIfExists("BRANCH MANAGER", "BRANCH_MANAGER");
-  }
+    private void initializeTierProducts() {
+        // Bronze Tier - Entry level
+        findOrCreateTierProduct(
+                "TIER-BRONZE",
+                "Bronze Loan Product",
+                8.0, // 8% interest rate
+                10000000.0, // Credit limit: 10 million
+                15000000.0, // Upgrade threshold: 15 million paid
+                1 // Tier order
+        );
 
-  private void mergeRoleIfExists(String oldName, String newName) {
-    roleRepository
-        .findByName(oldName)
-        .ifPresent(
-            oldRole -> {
-              Role newRole = findOrCreateRole(newName);
+        // Silver Tier - Mid level
+        findOrCreateTierProduct(
+                "TIER-SILVER",
+                "Silver Loan Product",
+                7.0, // 7% interest rate
+                25000000.0, // Credit limit: 25 million
+                50000000.0, // Upgrade threshold: 50 million paid
+                2 // Tier order
+        );
 
-              // 1. Reassign users
-              List<User> usersWithOldRole = userRepository.findByRoles_Name(oldName);
-              for (User user : usersWithOldRole) {
-                user.getRoles().remove(oldRole);
-                user.getRoles().add(newRole);
-                userRepository.save(user);
-              }
+        // Gold Tier - Top level
+        findOrCreateTierProduct(
+                "TIER-GOLD",
+                "Gold Loan Product",
+                6.0, // 6% interest rate
+                50000000.0, // Credit limit: 50 million
+                null, // No upgrade from Gold
+                3 // Tier order
+        );
+    }
 
-              // 2. Reassign menu mappings
-              List<RoleMenu> mappingsWithOldRole = roleMenuRepository.findByRoleId(oldRole.getId());
-              for (RoleMenu mapping : mappingsWithOldRole) {
-                if (!roleMenuRepository.existsById(
-                    new com.example.demo.entity.RoleMenuId(newRole.getId(), mapping.getMenuId()))) {
-                  roleMenuRepository.save(
-                      RoleMenu.builder()
-                          .roleId(newRole.getId())
-                          .menuId(mapping.getMenuId())
-                          .isActive(mapping.getIsActive())
-                          .deleted(mapping.getDeleted())
-                          .build());
-                }
-                roleMenuRepository.delete(mapping);
-              }
+    private Product findOrCreateTierProduct(
+            String code,
+            String name,
+            Double interestRate,
+            Double creditLimit,
+            Double upgradeThreshold,
+            Integer tierOrder) {
+        return productRepository
+                .findByCode(code)
+                .orElseGet(
+                        () -> {
+                            Product product = Product.builder()
+                                    .code(code)
+                                    .name(name)
+                                    .interestRate(interestRate)
+                                    .interestRateType("FIXED")
+                                    .minAmount(1000000.0) // Min: 1 million
+                                    .maxAmount(creditLimit) // Max equals credit limit
+                                    .minTenureMonths(3)
+                                    .maxTenureMonths(36)
+                                    .tierOrder(tierOrder)
+                                    .creditLimit(creditLimit)
+                                    .upgradeThreshold(upgradeThreshold)
+                                    .isActive(true)
+                                    .build();
+                            System.out.println("✓ Created tier product: " + name);
+                            return productRepository.save(product);
+                        });
+    }
 
-              // 3. Delete old role (hard delete since it's a cleanup of duplicates)
-              roleRepository.delete(oldRole);
-              System.out.println(
-                  "✓ Merged and removed duplicate role: " + oldName + " -> " + newName);
-            });
-  }
+    private Role findOrCreateRole(String name) {
+        return roleRepository
+                .findByName(name)
+                .orElseGet(() -> roleRepository.save(Role.builder().name(name).build()));
+    }
 
-  private void createTestUser(String username, String email, String password, Role... roles) {
-    userRepository
-        .findByUsername(username)
-        .orElseGet(
-            () -> {
-              Set<Role> roleSet = new HashSet<>();
-              for (Role r : roles) {
-                roleSet.add(r);
-              }
+    private Menu findOrCreateMenu(String code, String name, String urlPattern) {
+        return menuRepository
+                .findByCode(code)
+                .orElseGet(
+                        () -> menuRepository.save(
+                                Menu.builder().code(code).name(name).urlPattern(urlPattern).build()));
+    }
 
-              User user =
-                  User.builder()
-                      .username(username)
-                      .email(email)
-                      .password(passwordEncoder.encode(password))
-                      .isActive(true)
-                      .roles(roleSet)
-                      .build();
+    private void mapRoleToMenu(Role role, Menu menu) {
+        if (!roleMenuRepository.existsById(
+                new com.example.demo.entity.RoleMenuId(role.getId(), menu.getMenuId()))) {
+            roleMenuRepository.save(
+                    RoleMenu.builder().roleId(role.getId()).menuId(menu.getMenuId()).build());
+        }
+    }
 
-              return userRepository.save(user);
-            });
-  }
+    private void cleanupDuplicateRoles() {
+        mergeRoleIfExists("BACK OFFICE", "BACK_OFFICE");
+        mergeRoleIfExists("BRANCH MANAGER", "BRANCH_MANAGER");
+    }
+
+    private void mergeRoleIfExists(String oldName, String newName) {
+        roleRepository
+                .findByName(oldName)
+                .ifPresent(
+                        oldRole -> {
+                            Role newRole = findOrCreateRole(newName);
+
+                            // 1. Reassign users
+                            List<User> usersWithOldRole = userRepository.findByRoles_Name(oldName);
+                            for (User user : usersWithOldRole) {
+                                user.getRoles().remove(oldRole);
+                                user.getRoles().add(newRole);
+                                userRepository.save(user);
+                            }
+
+                            // 2. Reassign menu mappings
+                            List<RoleMenu> mappingsWithOldRole = roleMenuRepository.findByRoleId(oldRole.getId());
+                            for (RoleMenu mapping : mappingsWithOldRole) {
+                                if (!roleMenuRepository.existsById(
+                                        new com.example.demo.entity.RoleMenuId(newRole.getId(), mapping.getMenuId()))) {
+                                    roleMenuRepository.save(
+                                            RoleMenu.builder()
+                                                    .roleId(newRole.getId())
+                                                    .menuId(mapping.getMenuId())
+                                                    .isActive(mapping.getIsActive())
+                                                    .deleted(mapping.getDeleted())
+                                                    .build());
+                                }
+                                roleMenuRepository.delete(mapping);
+                            }
+
+                            // 3. Delete old role (hard delete since it's a cleanup of duplicates)
+                            roleRepository.delete(oldRole);
+                            System.out.println(
+                                    "✓ Merged and removed duplicate role: " + oldName + " -> " + newName);
+                        });
+    }
+
+    private void createTestUser(String username, String email, String password, Role... roles) {
+        userRepository
+                .findByUsername(username)
+                .orElseGet(
+                        () -> {
+                            Set<Role> roleSet = new HashSet<>();
+                            for (Role r : roles) {
+                                roleSet.add(r);
+                            }
+
+                            User user = User.builder()
+                                    .username(username)
+                                    .email(email)
+                                    .password(passwordEncoder.encode(password))
+                                    .isActive(true)
+                                    .roles(roleSet)
+                                    .build();
+
+                            return userRepository.save(user);
+                        });
+    }
+
+    private void cleanupDeprecatedMenus() {
+        List<String> deprecatedCodes = List.of(
+                "MARKETING_DASHBOARD",
+                "MARKETING_STATS",
+                "BRANCH_MANAGER_DASHBOARD",
+                "BRANCH_MANAGER_REPORTS",
+                "BACK_OFFICE_DASHBOARD",
+                "BACK_OFFICE_DISBURSEMENTS");
+
+        for (String code : deprecatedCodes) {
+            menuRepository
+                    .findByCode(code)
+                    .ifPresent(
+                            menu -> {
+                                // Delete role mappings
+                                List<RoleMenu> mappings = roleMenuRepository.findByMenuId(menu.getMenuId());
+                                if (!mappings.isEmpty()) {
+                                    roleMenuRepository.deleteAll(mappings);
+                                    System.out.println(
+                                            "Removed "
+                                                    + mappings.size()
+                                                    + " role mappings for deprecated menu: "
+                                                    + code);
+                                }
+                                // Delete menu
+                                menuRepository.delete(menu);
+                                System.out.println("Removed deprecated menu: " + code);
+                            });
+        }
+    }
 }
