@@ -680,3 +680,92 @@ INFO: In-app notification created successfully
 > [!IMPORTANT]
 > Both notification types are triggered on disbursement, but only in-app notifications are guaranteed. Email delivery depends on SMTP configuration and network availability.
 
+### 7.5 Role-Based Action Validation (Bucket Ownership)
+
+The system now enforces **strict role-based validation** when performing actions on loans. Each role can **only act on loans that are currently in their bucket (status)**.
+
+#### How It Works:
+
+All workflow actions go through a single endpoint:
+```
+POST /api/loan-workflow/action
+```
+
+Before any action is performed, the system validates:
+1. ✅ **Status-Action Validity**: Is this action valid for the current status?
+2. ✅ **Role Permission**: Does the user have permission to act on loans in this status?
+
+#### Bucket Ownership Matrix:
+
+| Loan Status | Bucket Owner | Required Permission | Role |
+|-------------|--------------|---------------------|------|
+| `SUBMITTED` | Marketing | `LOAN_REVIEW` | MARKETING |
+| `IN_REVIEW` | Marketing | `LOAN_REVIEW` | MARKETING |
+| `WAITING_APPROVAL` | Branch Manager | `LOAN_APPROVE` | BRANCH_MANAGER |
+| `APPROVED_WAITING_DISBURSEMENT` | Back Office | `LOAN_DISBURSE` | BACK_OFFICE |
+| `DISBURSED`, `REJECTED`, `PAID` | None | N/A | No actions allowed |
+
+#### Implementation Details:
+
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| Validation Method | `LoanWorkflowService.validateActorPermission()` | Checks user has menu permission for loan status |
+| Integration | `LoanWorkflowService.performAction()` | Called before status transition validation |
+| Exception | `AccessDeniedException` | Thrown when user lacks permission |
+
+#### Error Responses:
+
+**Marketing trying to act on Branch Manager's bucket:**
+```json
+{
+  "success": false,
+  "message": "Only Branch Managers can perform actions on loans awaiting approval"
+}
+```
+
+**Back Office trying to act on Marketing's bucket:**
+```json
+{
+  "success": false,
+  "message": "Only Marketing users can perform actions on loans in SUBMITTED status"
+}
+```
+
+#### Testing Role Validation:
+
+| Test Case | User | Loan Status | Action | Expected Result |
+|-----------|------|-------------|--------|-----------------|
+| ✅ Valid Marketing action | MARKETING | `SUBMITTED` | `COMMENT` | 200 OK, status → `IN_REVIEW` |
+| ❌ Invalid Marketing action | MARKETING | `WAITING_APPROVAL` | `APPROVE` | 403 AccessDeniedException |
+| ✅ Valid Manager action | BRANCH_MANAGER | `WAITING_APPROVAL` | `APPROVE` | 200 OK, status → `APPROVED_WAITING_DISBURSEMENT` |
+| ❌ Invalid Manager action | BRANCH_MANAGER | `IN_REVIEW` | `COMMENT` | 403 AccessDeniedException |
+| ✅ Valid Back Office action | BACK_OFFICE | `APPROVED_WAITING_DISBURSEMENT` | `DISBURSE` | 200 OK, status → `DISBURSED` |
+| ❌ Invalid Back Office action | BACK_OFFICE | `SUBMITTED` | `COMMENT` | 403 AccessDeniedException |
+
+#### Postman Test Example (Negative Test):
+
+```bash
+# Step 1: Login as Back Office
+POST /auth/login
+Body: { "usernameOrEmail": "back_office", "password": "password123" }
+# Save the token
+
+# Step 2: Try to comment on a SUBMITTED loan (should fail)
+POST /api/loan-workflow/action
+Authorization: Bearer <backoffice_token>
+Body: {
+  "loanApplicationId": 1,
+  "action": "COMMENT",
+  "comment": "This should not work"
+}
+
+# Expected Response: 403 Forbidden
+{
+  "success": false,
+  "message": "Only Marketing users can perform actions on loans in SUBMITTED status"
+}
+```
+
+> [!NOTE]
+> This validation ensures that even if a user has a valid JWT token, they cannot interfere with another role's workflow. The loan must be in the correct status (bucket) for the user's role before any action is allowed.
+

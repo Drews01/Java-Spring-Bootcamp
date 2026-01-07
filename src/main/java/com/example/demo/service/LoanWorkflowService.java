@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -145,6 +146,10 @@ public class LoanWorkflowService {
     String currentStatus = loanApplication.getCurrentStatus();
     String action = request.getAction();
 
+    // Validate that the actor has permission to act on loans in this status
+    // (bucket)
+    validateActorPermission(currentStatus);
+
     // Validate transition
     validateTransition(currentStatus, action);
 
@@ -242,6 +247,57 @@ public class LoanWorkflowService {
 
       default:
         throw new IllegalStateException("Unknown status: " + currentStatus);
+    }
+  }
+
+  /**
+   * Validates that the current user has permission to perform actions on loans in the given status.
+   * Each status belongs to a specific role's "bucket":
+   *
+   * <ul>
+   *   <li>SUBMITTED, IN_REVIEW → Marketing (requires LOAN_REVIEW menu)
+   *   <li>WAITING_APPROVAL → Branch Manager (requires LOAN_APPROVE menu)
+   *   <li>APPROVED_WAITING_DISBURSEMENT → Back Office (requires LOAN_DISBURSE menu)
+   * </ul>
+   *
+   * @param currentStatus the current status of the loan application
+   * @throws AccessDeniedException if the user doesn't have permission for this status
+   */
+  private void validateActorPermission(String currentStatus) {
+    switch (currentStatus) {
+      case "SUBMITTED":
+      case "IN_REVIEW":
+        // Only users with LOAN_REVIEW menu (Marketing) can act on these statuses
+        if (!accessControl.hasMenu("LOAN_REVIEW")) {
+          throw new AccessDeniedException(
+              "Only Marketing users can perform actions on loans in " + currentStatus + " status");
+        }
+        break;
+
+      case "WAITING_APPROVAL":
+        // Only users with LOAN_APPROVE menu (Branch Manager) can act
+        if (!accessControl.hasMenu("LOAN_APPROVE") && !accessControl.hasMenu("LOAN_REJECT")) {
+          throw new AccessDeniedException(
+              "Only Branch Managers can perform actions on loans awaiting approval");
+        }
+        break;
+
+      case "APPROVED_WAITING_DISBURSEMENT":
+        // Only users with LOAN_DISBURSE menu (Back Office) can act
+        if (!accessControl.hasMenu("LOAN_DISBURSE")) {
+          throw new AccessDeniedException(
+              "Only Back Office users can perform actions on approved loans");
+        }
+        break;
+
+      case "DISBURSED":
+      case "REJECTED":
+      case "PAID":
+        throw new IllegalStateException(
+            "No actions are allowed for loans in " + currentStatus + " status");
+
+      default:
+        throw new IllegalStateException("Unknown loan status: " + currentStatus);
     }
   }
 
