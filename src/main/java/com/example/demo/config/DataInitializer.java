@@ -1,10 +1,12 @@
 package com.example.demo.config;
 
+import com.example.demo.entity.Branch;
 import com.example.demo.entity.Menu;
 import com.example.demo.entity.Product;
 import com.example.demo.entity.Role;
 import com.example.demo.entity.RoleMenu;
 import com.example.demo.entity.User;
+import com.example.demo.repository.BranchRepository;
 import com.example.demo.repository.MenuRepository;
 import com.example.demo.repository.ProductRepository;
 import com.example.demo.repository.RoleMenuRepository;
@@ -27,6 +29,7 @@ public class DataInitializer implements CommandLineRunner {
   private final ProductRepository productRepository;
   private final MenuRepository menuRepository;
   private final RoleMenuRepository roleMenuRepository;
+  private final BranchRepository branchRepository;
   private final PasswordEncoder passwordEncoder;
 
   @Override
@@ -108,6 +111,19 @@ public class DataInitializer implements CommandLineRunner {
     Menu loanQueueBackOffice =
         findOrCreateMenu(
             "LOAN_QUEUE_BACK_OFFICE", "Back Office Queue", "/api/loan-workflow/queue/back-office");
+
+    // Permission menus for workflow actions (not URL-based, but permission-based)
+    Menu loanReview =
+        findOrCreateMenu("LOAN_REVIEW", "Review Loans (Marketing)", "/api/loan-workflow/action");
+    Menu loanApprove =
+        findOrCreateMenu(
+            "LOAN_APPROVE", "Approve Loans (Branch Manager)", "/api/loan-workflow/action");
+    Menu loanReject =
+        findOrCreateMenu(
+            "LOAN_REJECT", "Reject Loans (Branch Manager)", "/api/loan-workflow/action");
+    Menu loanDisburse =
+        findOrCreateMenu(
+            "LOAN_DISBURSE", "Disburse Loans (Back Office)", "/api/loan-workflow/action");
 
     // -------------------- LOAN APPLICATION (ADMIN/STAFF) --------------------
     Menu loanAppCreate =
@@ -399,14 +415,65 @@ public class DataInitializer implements CommandLineRunner {
     mapRoleToMenu(backOfficeRole, staffDashboard);
     mapRoleToMenu(backOfficeRole, staffQueue);
 
+    // Permission-based menus for workflow actions
+    // Marketing: Can review loans (SUBMITTED, IN_REVIEW statuses)
+    mapRoleToMenu(marketingRole, loanReview);
+    mapRoleToMenu(marketingRole, loanQueueMarketing);
+    mapRoleToMenu(marketingRole, loanAction);
+    mapRoleToMenu(marketingRole, loanAllowedActions);
+    mapRoleToMenu(marketingRole, loanAppGet);
+    mapRoleToMenu(marketingRole, loanHistoryByLoan);
+    mapRoleToMenu(marketingRole, productList);
+    mapRoleToMenu(marketingRole, productActive);
+
+    // Branch Manager: Can approve/reject loans (WAITING_APPROVAL status)
+    mapRoleToMenu(branchManagerRole, loanApprove);
+    mapRoleToMenu(branchManagerRole, loanReject);
+    mapRoleToMenu(branchManagerRole, loanQueueBranchManager);
+    mapRoleToMenu(branchManagerRole, loanAction);
+    mapRoleToMenu(branchManagerRole, loanAllowedActions);
+    mapRoleToMenu(branchManagerRole, loanAppGet);
+    mapRoleToMenu(branchManagerRole, loanHistoryByLoan);
+    mapRoleToMenu(branchManagerRole, productList);
+    mapRoleToMenu(branchManagerRole, productActive);
+
+    // Back Office: Can disburse loans (APPROVED_WAITING_DISBURSEMENT status) - sees
+    // all branches
+    mapRoleToMenu(backOfficeRole, loanDisburse);
+    mapRoleToMenu(backOfficeRole, loanQueueBackOffice);
+    mapRoleToMenu(backOfficeRole, loanAction);
+    mapRoleToMenu(backOfficeRole, loanAllowedActions);
+    mapRoleToMenu(backOfficeRole, loanAppGet);
+    mapRoleToMenu(backOfficeRole, loanAppByStatus);
+    mapRoleToMenu(backOfficeRole, loanHistoryByLoan);
+    mapRoleToMenu(backOfficeRole, productList);
+    mapRoleToMenu(backOfficeRole, productActive);
+
     // ============================================================
-    // TEST USERS
+    // BRANCHES INITIALIZATION
     // ============================================================
-    createTestUser("admin", "admin@example.com", "admin123", adminRole, userRole);
-    createTestUser("marketing", "marketing@example.com", "pass123", marketingRole);
-    createTestUser("manager", "manager@example.com", "pass123", branchManagerRole);
-    createTestUser("backoffice", "backoffice@example.com", "pass123", backOfficeRole);
-    createTestUser("user", "user@example.com", "pass123", userRole);
+    Branch jakartaBranch = findOrCreateBranch("JKT", "Jakarta", "Jl. Sudirman No. 1, Jakarta");
+    Branch surabayaBranch =
+        findOrCreateBranch("SBY", "Surabaya", "Jl. Basuki Rahmat No. 10, Surabaya");
+    Branch semarangBranch = findOrCreateBranch("SMG", "Semarang", "Jl. Pemuda No. 5, Semarang");
+
+    // ============================================================
+    // TEST USERS (with branch assignments for staff)
+    // ============================================================
+    createTestUser("admin", "admin@example.com", "admin123", null, adminRole, userRole);
+    createTestUser("marketing", "marketing@example.com", "pass123", jakartaBranch, marketingRole);
+    createTestUser("manager", "manager@example.com", "pass123", jakartaBranch, branchManagerRole);
+    createTestUser("backoffice", "backoffice@example.com", "pass123", null, backOfficeRole);
+    createTestUser("user", "user@example.com", "pass123", null, userRole);
+    // Additional users for other branches
+    createTestUser(
+        "marketing_sby", "marketing_sby@example.com", "pass123", surabayaBranch, marketingRole);
+    createTestUser(
+        "manager_sby", "manager_sby@example.com", "pass123", surabayaBranch, branchManagerRole);
+    createTestUser(
+        "marketing_smg", "marketing_smg@example.com", "pass123", semarangBranch, marketingRole);
+    createTestUser(
+        "manager_smg", "manager_smg@example.com", "pass123", semarangBranch, branchManagerRole);
 
     // ============================================================
     // TIER PRODUCTS
@@ -415,6 +482,7 @@ public class DataInitializer implements CommandLineRunner {
 
     System.out.println("✓ Data initialization completed!");
     System.out.println("✓ Roles created: ADMIN, USER, BACK_OFFICE, BRANCH_MANAGER, MARKETING");
+    System.out.println("✓ Branches created: Jakarta, Surabaya, Semarang");
     System.out.println("✓ Menus & RBAC seeded with all endpoint mappings");
     System.out.println("✓ Tier products created: BRONZE, SILVER, GOLD");
   }
@@ -548,7 +616,8 @@ public class DataInitializer implements CommandLineRunner {
             });
   }
 
-  private void createTestUser(String username, String email, String password, Role... roles) {
+  private void createTestUser(
+      String username, String email, String password, Branch branch, Role... roles) {
     userRepository
         .findByUsername(username)
         .orElseGet(
@@ -565,9 +634,22 @@ public class DataInitializer implements CommandLineRunner {
                       .password(passwordEncoder.encode(password))
                       .isActive(true)
                       .roles(roleSet)
+                      .branch(branch)
                       .build();
 
               return userRepository.save(user);
+            });
+  }
+
+  private Branch findOrCreateBranch(String code, String name, String address) {
+    return branchRepository
+        .findByCode(code)
+        .orElseGet(
+            () -> {
+              Branch branch =
+                  Branch.builder().code(code).name(name).address(address).isActive(true).build();
+              System.out.println("✓ Created branch: " + name);
+              return branchRepository.save(branch);
             });
   }
 

@@ -15,4 +15,5 @@ public class LoanSubmitRequest {
   private Double amount;
   private Integer tenureMonths;
   private Double interestRateApplied; // Optional - uses product's rate if not specified
+  private Long branchId; // Required - the branch this loan application belongs to
 }

@@ -6,6 +6,7 @@ import com.example.demo.dto.LoanActionRequest;
 import com.example.demo.dto.LoanApplicationDTO;
 import com.example.demo.dto.LoanQueueItemDTO;
 import com.example.demo.dto.LoanSubmitRequest;
+import com.example.demo.entity.Branch;
 import com.example.demo.entity.LoanApplication;
 import com.example.demo.entity.LoanHistory;
 import com.example.demo.entity.User;
@@ -15,6 +16,7 @@ import com.example.demo.repository.LoanHistoryRepository;
 import com.example.demo.repository.UserRepository;
 import com.example.demo.security.CustomUserDetails;
 import com.example.demo.service.LoanWorkflowService;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -56,7 +58,7 @@ public class LoanWorkflowController {
   @PreAuthorize("@accessControl.hasMenu('LOAN_REVIEW')")
   public ResponseEntity<ApiResponse<List<LoanQueueItemDTO>>> getMarketingQueue() {
     List<String> statuses = Arrays.asList(LoanStatus.SUBMITTED.name(), LoanStatus.IN_REVIEW.name());
-    List<LoanQueueItemDTO> queue = getQueueItems(statuses);
+    List<LoanQueueItemDTO> queue = getQueueItems(statuses, true);
     return ResponseUtil.ok(queue, "Marketing queue retrieved successfully");
   }
 
@@ -64,7 +66,7 @@ public class LoanWorkflowController {
   @PreAuthorize("@accessControl.hasMenu('LOAN_APPROVE')")
   public ResponseEntity<ApiResponse<List<LoanQueueItemDTO>>> getBranchManagerQueue() {
     List<String> statuses = Arrays.asList(LoanStatus.WAITING_APPROVAL.name());
-    List<LoanQueueItemDTO> queue = getQueueItems(statuses);
+    List<LoanQueueItemDTO> queue = getQueueItems(statuses, true);
     return ResponseUtil.ok(queue, "Branch manager queue retrieved successfully");
   }
 
@@ -72,7 +74,8 @@ public class LoanWorkflowController {
   @PreAuthorize("@accessControl.hasMenu('LOAN_DISBURSE')")
   public ResponseEntity<ApiResponse<List<LoanQueueItemDTO>>> getBackOfficeQueue() {
     List<String> statuses = Arrays.asList(LoanStatus.APPROVED_WAITING_DISBURSEMENT.name());
-    List<LoanQueueItemDTO> queue = getQueueItems(statuses);
+    // Back Office sees all branches (headquarters role)
+    List<LoanQueueItemDTO> queue = getQueueItems(statuses, false);
     return ResponseUtil.ok(queue, "Back office queue retrieved successfully");
   }
 
@@ -91,9 +94,27 @@ public class LoanWorkflowController {
     return ResponseUtil.ok(allowedActions, "Allowed actions retrieved successfully");
   }
 
-  private List<LoanQueueItemDTO> getQueueItems(List<String> statuses) {
-    List<LoanApplication> loans =
-        loanApplicationRepository.findByCurrentStatusInOrderByCreatedAtDesc(statuses);
+  private List<LoanQueueItemDTO> getQueueItems(List<String> statuses, boolean filterByBranch) {
+    Long currentUserId = getCurrentUserId();
+    User currentUser =
+        userRepository
+            .findById(currentUserId)
+            .orElseThrow(() -> new RuntimeException("User not found"));
+
+    List<LoanApplication> loans;
+
+    // If filterByBranch is true and user has a branch, filter by that branch
+    if (filterByBranch && currentUser.getBranch() != null) {
+      loans =
+          loanApplicationRepository.findByCurrentStatusInAndBranch_IdOrderByCreatedAtDesc(
+              statuses, currentUser.getBranch().getId());
+    } else if (filterByBranch && currentUser.getBranch() == null) {
+      // User has no branch assigned, return empty list
+      return new ArrayList<>();
+    } else {
+      // No branch filter (e.g., Back Office sees all)
+      loans = loanApplicationRepository.findByCurrentStatusInOrderByCreatedAtDesc(statuses);
+    }
 
     return loans.stream()
         .map(
@@ -129,6 +150,9 @@ public class LoanWorkflowController {
                       .findFirst()
                       .map(LoanHistory::getComment)
                       .orElse(null);
+
+              // Get branch info
+              Branch loanBranch = loan.getBranch();
 
               return LoanQueueItemDTO.builder()
                   .loanApplicationId(loan.getLoanApplicationId())
@@ -170,6 +194,8 @@ public class LoanWorkflowController {
                           : null)
                   .marketingComment(marketingComment)
                   .branchManagerComment(branchManagerComment)
+                  .branchId(loanBranch != null ? loanBranch.getId() : null)
+                  .branchName(loanBranch != null ? loanBranch.getName() : null)
                   .build();
             })
         .collect(Collectors.toList());

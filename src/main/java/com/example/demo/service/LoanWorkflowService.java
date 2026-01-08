@@ -3,12 +3,14 @@ package com.example.demo.service;
 import com.example.demo.dto.LoanActionRequest;
 import com.example.demo.dto.LoanApplicationDTO;
 import com.example.demo.dto.LoanSubmitRequest;
+import com.example.demo.entity.Branch;
 import com.example.demo.entity.LoanApplication;
 import com.example.demo.entity.LoanHistory;
 import com.example.demo.entity.Product;
 import com.example.demo.entity.User;
 import com.example.demo.enums.LoanAction;
 import com.example.demo.enums.LoanStatus;
+import com.example.demo.repository.BranchRepository;
 import com.example.demo.repository.LoanApplicationRepository;
 import com.example.demo.repository.LoanHistoryRepository;
 import com.example.demo.repository.ProductRepository;
@@ -30,6 +32,7 @@ public class LoanWorkflowService {
   private final LoanHistoryRepository loanHistoryRepository;
   private final UserRepository userRepository;
   private final ProductRepository productRepository;
+  private final BranchRepository branchRepository;
   private final NotificationService notificationService;
   private final AccessControlService accessControl;
   private final LoanEligibilityService loanEligibilityService;
@@ -87,6 +90,16 @@ public class LoanWorkflowService {
       product = tierProduct;
     }
 
+    // Validate and fetch branch
+    if (request.getBranchId() == null) {
+      throw new IllegalArgumentException("Branch ID is required for loan submission");
+    }
+    Branch branch =
+        branchRepository
+            .findById(request.getBranchId())
+            .orElseThrow(
+                () -> new RuntimeException("Branch not found with id: " + request.getBranchId()));
+
     // Create loan application with SUBMITTED status
     Double interestRate =
         request.getInterestRateApplied() != null
@@ -101,6 +114,7 @@ public class LoanWorkflowService {
         LoanApplication.builder()
             .user(user)
             .product(product)
+            .branch(branch)
             .amount(request.getAmount())
             .tenureMonths(request.getTenureMonths())
             .interestRateApplied(interestRate)

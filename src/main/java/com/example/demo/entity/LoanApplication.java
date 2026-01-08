@@ -28,6 +28,10 @@ public class LoanApplication {
   @JoinColumn(name = "product_id", nullable = false)
   private Product product;
 
+  @ManyToOne
+  @JoinColumn(name = "branch_id")
+  private Branch branch;
+
   @Column(nullable = false)
   private Double amount;
 

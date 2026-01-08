@@ -36,4 +36,8 @@ public class LoanQueueItemDTO {
 
   private String marketingComment;
   private String branchManagerComment;
+
+  // Branch information
+  private Long branchId;
+  private String branchName;
 }

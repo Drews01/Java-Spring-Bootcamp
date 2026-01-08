@@ -22,6 +22,10 @@ public interface LoanApplicationRepository extends JpaRepository<LoanApplication
 
   List<LoanApplication> findByCurrentStatusInOrderByCreatedAtDesc(List<String> statuses);
 
+  // Branch-filtered query for role-based queue
+  List<LoanApplication> findByCurrentStatusInAndBranch_IdOrderByCreatedAtDesc(
+      List<String> statuses, Long branchId);
+
   // Tier system queries
   List<LoanApplication> findByUser_IdAndIsPaidFalse(Long userId);
 
