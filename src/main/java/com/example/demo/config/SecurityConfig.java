@@ -43,6 +43,8 @@ public class SecurityConfig {
                     .permitAll() // Allow error endpoint
                     .requestMatchers("/api/products/**")
                     .permitAll() // Allow public product endpoints
+                    .requestMatchers("/uploads/**")
+                    .permitAll() // Allow access to uploaded files
                     .anyRequest()
                     .access(dynamicAuthorizationManager) // Use dynamic RBAC for everything else
             )

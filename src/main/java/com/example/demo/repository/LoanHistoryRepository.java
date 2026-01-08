@@ -20,6 +20,10 @@ public interface LoanHistoryRepository extends JpaRepository<LoanHistory, Long> 
   List<LoanHistory> findByLoanApplication_LoanApplicationIdAndAction(
       Long loanApplicationId, String action);
 
+  // Parse latest comment
+  LoanHistory findTopByLoanApplication_LoanApplicationIdAndCommentIsNotNullOrderByCreatedAtDesc(
+      Long loanApplicationId);
+
   // Dashboard Trends
   @Query(
       "SELECT YEAR(lh.createdAt) as year, SUM(la.amount) as total "

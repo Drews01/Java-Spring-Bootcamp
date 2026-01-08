@@ -2,6 +2,7 @@ package com.example.demo.controller;
 
 import com.example.demo.base.ApiResponse;
 import com.example.demo.base.ResponseUtil;
+import com.example.demo.dto.UploadImageResponse;
 import com.example.demo.dto.UserProfileDTO;
 import com.example.demo.entity.User;
 import com.example.demo.repository.UserRepository;
@@ -13,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/user-profiles")
@@ -47,6 +49,18 @@ public class UserProfileController {
   }
 
   /**
+   * Upload KTP image for the authenticated user. SECURITY: userId is extracted from JWT token to
+   * prevent IDOR.
+   */
+  @PostMapping("/upload-ktp")
+  public ResponseEntity<ApiResponse<UploadImageResponse>> uploadKtp(
+      @RequestParam("file") MultipartFile file) {
+    Long authenticatedUserId = getCurrentUserId();
+    UploadImageResponse response = userProfileService.uploadKtp(authenticatedUserId, file);
+    return ResponseUtil.ok(response, "KTP image uploaded successfully");
+  }
+
+  /**
    * Get the authenticated user's profile. SECURITY: Only returns the profile of the authenticated
    * user.
    */
@@ -62,6 +76,13 @@ public class UserProfileController {
   public ResponseEntity<ApiResponse<List<UserProfileDTO>>> getAllUserProfiles() {
     List<UserProfileDTO> userProfiles = userProfileService.getAllUserProfiles();
     return ResponseUtil.ok(userProfiles, "User profiles retrieved successfully");
+  }
+
+  /** Get user profile by ID - For Staff/Admin use */
+  @GetMapping("/{userId}")
+  public ResponseEntity<ApiResponse<UserProfileDTO>> getUserProfile(@PathVariable Long userId) {
+    UserProfileDTO userProfile = userProfileService.getUserProfile(userId);
+    return ResponseUtil.ok(userProfile, "User profile retrieved successfully");
   }
 
   /**

@@ -47,8 +47,10 @@ public class DashboardService {
     Long totalApplications = loanApplicationRepository.countTotalApplicationsByYear(year);
 
     // Calculate Approval Rate: Approved / (Approved + Rejected)
-    long approvedCount = statusCounts.get("DISBURSED")
-        + statusCounts.get("APPROVED_WAITING_DISBURSEMENT"); // Approvals include pending disbursement
+    long approvedCount =
+        statusCounts.get("DISBURSED")
+            + statusCounts.get(
+                "APPROVED_WAITING_DISBURSEMENT"); // Approvals include pending disbursement
     long rejectedCount = statusCounts.get("REJECTED");
     long decisionedCount = approvedCount + rejectedCount;
 
@@ -62,28 +64,35 @@ public class DashboardService {
 
     // 2. Financial Overview
     // Total Disbursed: Sum of monthly stats for consistency with the chart
-    Double totalDisbursedAmount = chartData.getMonthlyStats().values().stream().mapToDouble(Double::doubleValue).sum();
+    Double totalDisbursedAmount =
+        chartData.getMonthlyStats().values().stream().mapToDouble(Double::doubleValue).sum();
 
     // Financials for this Vintage (Loans originated in this year)
     // Using PAID status for "realized" revenue is tricky if partial payments exist,
     // but here we assume full PAID status
-    Double totalPaidAmount = loanApplicationRepository.sumAmountByCurrentStatusAndYear(LoanStatus.PAID.name(), year);
-    Double totalPaidTotalAmount = loanApplicationRepository.sumTotalAmountToPayByCurrentStatusAndYear(
-        LoanStatus.PAID.name(), year);
-    Double totalInterestEarned = (totalPaidTotalAmount != null ? totalPaidTotalAmount : 0)
-        - (totalPaidAmount != null ? totalPaidAmount : 0);
+    Double totalPaidAmount =
+        loanApplicationRepository.sumAmountByCurrentStatusAndYear(LoanStatus.PAID.name(), year);
+    Double totalPaidTotalAmount =
+        loanApplicationRepository.sumTotalAmountToPayByCurrentStatusAndYear(
+            LoanStatus.PAID.name(), year);
+    Double totalInterestEarned =
+        (totalPaidTotalAmount != null ? totalPaidTotalAmount : 0)
+            - (totalPaidAmount != null ? totalPaidAmount : 0);
 
-    Double outstandingDisbursed = loanApplicationRepository.sumAmountByCurrentStatusAndYear(
-        LoanStatus.DISBURSED.name(), year);
+    Double outstandingDisbursed =
+        loanApplicationRepository.sumAmountByCurrentStatusAndYear(
+            LoanStatus.DISBURSED.name(), year);
     // "Outstanding Principal" usually means principal not yet paid back.
     // If status is DISBURSED, it's all outstanding.
     Double outstandingPrincipal = outstandingDisbursed;
 
     // Potential Revenue: Interest from active loans (DISBURSED)
-    Double disbursedTotalToPay = loanApplicationRepository.sumTotalAmountToPayByCurrentStatusAndYear(
-        LoanStatus.DISBURSED.name(), year);
-    Double potentialRevenue = (disbursedTotalToPay != null ? disbursedTotalToPay : 0)
-        - (outstandingDisbursed != null ? outstandingDisbursed : 0);
+    Double disbursedTotalToPay =
+        loanApplicationRepository.sumTotalAmountToPayByCurrentStatusAndYear(
+            LoanStatus.DISBURSED.name(), year);
+    Double potentialRevenue =
+        (disbursedTotalToPay != null ? disbursedTotalToPay : 0)
+            - (outstandingDisbursed != null ? outstandingDisbursed : 0);
 
     return ExecutiveDashboardDTO.builder()
         .statusCounts(statusCounts)
@@ -109,21 +118,22 @@ public class DashboardService {
 
     // Monthly Trend for specific year
     List<Object[]> monthlyData = loanHistoryRepository.findMonthlyDisbursementStats(year);
-    Map<String, Double> monthlyStats = new HashMap<>(); // Could use generic map or keep order if needed
+    Map<String, Double> monthlyStats =
+        new HashMap<>(); // Could use generic map or keep order if needed
     // Initialize months to 0
     String[] months = {
-        "JANUARY",
-        "FEBRUARY",
-        "MARCH",
-        "APRIL",
-        "MAY",
-        "JUNE",
-        "JULY",
-        "AUGUST",
-        "SEPTEMBER",
-        "OCTOBER",
-        "NOVEMBER",
-        "DECEMBER"
+      "JANUARY",
+      "FEBRUARY",
+      "MARCH",
+      "APRIL",
+      "MAY",
+      "JUNE",
+      "JULY",
+      "AUGUST",
+      "SEPTEMBER",
+      "OCTOBER",
+      "NOVEMBER",
+      "DECEMBER"
     };
     for (String month : months) {
       monthlyStats.put(month, 0.0);

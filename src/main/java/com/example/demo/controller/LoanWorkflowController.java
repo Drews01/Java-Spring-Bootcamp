@@ -7,9 +7,11 @@ import com.example.demo.dto.LoanApplicationDTO;
 import com.example.demo.dto.LoanQueueItemDTO;
 import com.example.demo.dto.LoanSubmitRequest;
 import com.example.demo.entity.LoanApplication;
+import com.example.demo.entity.LoanHistory;
 import com.example.demo.entity.User;
 import com.example.demo.enums.LoanStatus;
 import com.example.demo.repository.LoanApplicationRepository;
+import com.example.demo.repository.LoanHistoryRepository;
 import com.example.demo.repository.UserRepository;
 import com.example.demo.security.CustomUserDetails;
 import com.example.demo.service.LoanWorkflowService;
@@ -30,6 +32,7 @@ public class LoanWorkflowController {
 
   private final LoanWorkflowService loanWorkflowService;
   private final LoanApplicationRepository loanApplicationRepository;
+  private final LoanHistoryRepository loanHistoryRepository;
   private final UserRepository userRepository;
 
   @PostMapping("/submit")
@@ -99,6 +102,34 @@ public class LoanWorkflowController {
               List<String> allowedActions =
                   loanWorkflowService.getAllowedActions(loan.getCurrentStatus(), userId);
 
+              // Fetch history once to extract all comments
+              List<LoanHistory> historyList =
+                  loanHistoryRepository.findByLoanApplication_LoanApplicationIdOrderByCreatedAtDesc(
+                      loan.getLoanApplicationId());
+
+              String marketingComment =
+                  historyList.stream()
+                      .filter(
+                          h ->
+                              h.getComment() != null
+                                  && !h.getComment().isEmpty()
+                                  && (LoanStatus.SUBMITTED.name().equals(h.getFromStatus())
+                                      || LoanStatus.IN_REVIEW.name().equals(h.getFromStatus())))
+                      .findFirst()
+                      .map(LoanHistory::getComment)
+                      .orElse(null);
+
+              String branchManagerComment =
+                  historyList.stream()
+                      .filter(
+                          h ->
+                              h.getComment() != null
+                                  && !h.getComment().isEmpty()
+                                  && LoanStatus.WAITING_APPROVAL.name().equals(h.getFromStatus()))
+                      .findFirst()
+                      .map(LoanHistory::getComment)
+                      .orElse(null);
+
               return LoanQueueItemDTO.builder()
                   .loanApplicationId(loan.getLoanApplicationId())
                   .userId(loan.getUser().getId())
@@ -113,6 +144,32 @@ public class LoanWorkflowController {
                   .createdAt(loan.getCreatedAt())
                   .updatedAt(loan.getUpdatedAt())
                   .allowedActions(allowedActions)
+                  .userNik(
+                      loan.getUser().getUserProfile() != null
+                          ? loan.getUser().getUserProfile().getNik()
+                          : null)
+                  .userKtpPath(
+                      loan.getUser().getUserProfile() != null
+                          ? loan.getUser().getUserProfile().getKtpPath()
+                          : null)
+                  .userPhoneNumber(
+                      loan.getUser().getUserProfile() != null
+                          ? loan.getUser().getUserProfile().getPhoneNumber()
+                          : null)
+                  .userAddress(
+                      loan.getUser().getUserProfile() != null
+                          ? loan.getUser().getUserProfile().getAddress()
+                          : null)
+                  .userAccountNumber(
+                      loan.getUser().getUserProfile() != null
+                          ? loan.getUser().getUserProfile().getAccountNumber()
+                          : null)
+                  .userBankName(
+                      loan.getUser().getUserProfile() != null
+                          ? loan.getUser().getUserProfile().getBankName()
+                          : null)
+                  .marketingComment(marketingComment)
+                  .branchManagerComment(branchManagerComment)
                   .build();
             })
         .collect(Collectors.toList());

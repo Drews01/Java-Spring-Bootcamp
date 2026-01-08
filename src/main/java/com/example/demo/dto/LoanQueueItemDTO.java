@@ -25,4 +25,15 @@ public class LoanQueueItemDTO {
   private LocalDateTime createdAt;
   private LocalDateTime updatedAt;
   private List<String> allowedActions;
+
+  // New fields from UserProfile
+  private String userNik;
+  private String userKtpPath;
+  private String userPhoneNumber;
+  private String userAddress;
+  private String userAccountNumber;
+  private String userBankName;
+
+  private String marketingComment;
+  private String branchManagerComment;
 }
