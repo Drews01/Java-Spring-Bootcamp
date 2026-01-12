@@ -17,6 +17,7 @@ public class UserListDTO {
   private String email;
   private Boolean isActive;
   private Set<String> roles;
+  private String branchName;
 
   public static UserListDTO fromUser(com.example.demo.entity.User user) {
     Set<String> roleNames =
@@ -29,6 +30,7 @@ public class UserListDTO {
         .email(user.getEmail())
         .isActive(user.getIsActive())
         .roles(roleNames)
+        .branchName(user.getBranch() != null ? user.getBranch().getName() : null)
         .build();
   }
 }

@@ -175,12 +175,9 @@ public class AuthService {
     // Create reset token (valid for 1 hour) in Redis
     String token = passwordResetService.createPasswordResetToken(user.getId(), 1);
 
-    // Send email
-    String resetLink = "http://localhost:8080/reset-password?token=" + token;
-    emailService.sendSimpleMessage(
-        user.getEmail(),
-        "Password Reset Request",
-        "To reset your password, click the link below:\n" + resetLink);
+    // Send email with frontend URL
+    String resetLink = "http://localhost:4200/reset-password?token=" + token;
+    emailService.sendPasswordResetEmail(user.getEmail(), user.getUsername(), resetLink);
   }
 
   /** Reset password */
