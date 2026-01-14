@@ -2,6 +2,8 @@ package com.example.demo.repository;
 
 import com.example.demo.entity.LoanHistory;
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -42,4 +44,38 @@ public interface LoanHistoryRepository extends JpaRepository<LoanHistory, Long> 
           + "GROUP BY MONTH(lh.createdAt) "
           + "ORDER BY MONTH(lh.createdAt)")
   List<Object[]> findMonthlyDisbursementStats(@Param("year") Integer year);
+
+  // Action History - Paginated queries for role-based history
+  // Query by actor and actions (no date filter)
+  @Query(
+      "SELECT lh FROM LoanHistory lh "
+          + "WHERE lh.actorUser.id = :actorId AND lh.action IN :actions "
+          + "ORDER BY lh.createdAt DESC")
+  Page<LoanHistory> findByActorAndActions(
+      @Param("actorId") Long actorId, @Param("actions") List<String> actions, Pageable pageable);
+
+  // Query by actor, actions, and year
+  @Query(
+      "SELECT lh FROM LoanHistory lh "
+          + "WHERE lh.actorUser.id = :actorId AND lh.action IN :actions "
+          + "AND YEAR(lh.createdAt) = :year "
+          + "ORDER BY lh.createdAt DESC")
+  Page<LoanHistory> findByActorAndActionsAndYear(
+      @Param("actorId") Long actorId,
+      @Param("actions") List<String> actions,
+      @Param("year") Integer year,
+      Pageable pageable);
+
+  // Query by actor, actions, month, and year
+  @Query(
+      "SELECT lh FROM LoanHistory lh "
+          + "WHERE lh.actorUser.id = :actorId AND lh.action IN :actions "
+          + "AND YEAR(lh.createdAt) = :year AND MONTH(lh.createdAt) = :month "
+          + "ORDER BY lh.createdAt DESC")
+  Page<LoanHistory> findByActorAndActionsAndMonthAndYear(
+      @Param("actorId") Long actorId,
+      @Param("actions") List<String> actions,
+      @Param("month") Integer month,
+      @Param("year") Integer year,
+      Pageable pageable);
 }

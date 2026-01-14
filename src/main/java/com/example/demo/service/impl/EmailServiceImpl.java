@@ -10,30 +10,29 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class EmailServiceImpl implements EmailService {
 
-  private final JavaMailSender emailSender;
+    private final JavaMailSender emailSender;
 
-  @Override
-  public void sendSimpleMessage(String to, String subject, String text) {
-    SimpleMailMessage message = new SimpleMailMessage();
-    message.setTo(to);
-    message.setSubject(subject);
-    message.setText(text);
-    emailSender.send(message);
-  }
+    @Override
+    public void sendSimpleMessage(String to, String subject, String text) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(to);
+        message.setSubject(subject);
+        message.setText(text);
+        emailSender.send(message);
+    }
 
-  @Override
-  public void sendLoanDisbursementEmail(String to, String userName, Long loanId, Double amount) {
-    try {
-      jakarta.mail.internet.MimeMessage message = emailSender.createMimeMessage();
-      org.springframework.mail.javamail.MimeMessageHelper helper =
-          new org.springframework.mail.javamail.MimeMessageHelper(message, true, "UTF-8");
+    @Override
+    public void sendLoanDisbursementEmail(String to, String userName, Long loanId, Double amount) {
+        try {
+            jakarta.mail.internet.MimeMessage message = emailSender.createMimeMessage();
+            org.springframework.mail.javamail.MimeMessageHelper helper = new org.springframework.mail.javamail.MimeMessageHelper(
+                    message, true, "UTF-8");
 
-      helper.setTo(to);
-      helper.setSubject("Your Loan Has Been Disbursed - Loan #" + loanId);
+            helper.setTo(to);
+            helper.setSubject("Your Loan Has Been Disbursed - Loan #" + loanId);
 
-      String htmlContent =
-          String.format(
-              """
+            String htmlContent = String.format(
+                    """
                             <!DOCTYPE html>
                             <html>
                             <head>
@@ -108,28 +107,27 @@ public class EmailServiceImpl implements EmailService {
                             </body>
                             </html>
                             """,
-              userName, loanId, amount);
+                    userName, loanId, amount);
 
-      helper.setText(htmlContent, true);
-      emailSender.send(message);
-    } catch (jakarta.mail.MessagingException e) {
-      throw new RuntimeException("Failed to send loan disbursement email", e);
+            helper.setText(htmlContent, true);
+            emailSender.send(message);
+        } catch (jakarta.mail.MessagingException e) {
+            throw new RuntimeException("Failed to send loan disbursement email", e);
+        }
     }
-  }
 
-  @Override
-  public void sendPasswordResetEmail(String to, String userName, String resetLink) {
-    try {
-      jakarta.mail.internet.MimeMessage message = emailSender.createMimeMessage();
-      org.springframework.mail.javamail.MimeMessageHelper helper =
-          new org.springframework.mail.javamail.MimeMessageHelper(message, true, "UTF-8");
+    @Override
+    public void sendPasswordResetEmail(String to, String userName, String resetLink) {
+        try {
+            jakarta.mail.internet.MimeMessage message = emailSender.createMimeMessage();
+            org.springframework.mail.javamail.MimeMessageHelper helper = new org.springframework.mail.javamail.MimeMessageHelper(
+                    message, true, "UTF-8");
 
-      helper.setTo(to);
-      helper.setSubject("Password Reset Request");
+            helper.setTo(to);
+            helper.setSubject("Password Reset Request");
 
-      String htmlContent =
-          String.format(
-              """
+            String htmlContent = String.format(
+                    """
                             <!DOCTYPE html>
                             <html>
                             <head>
@@ -186,12 +184,90 @@ public class EmailServiceImpl implements EmailService {
                             </body>
                             </html>
                             """,
-              userName, resetLink, resetLink);
+                    userName, resetLink, resetLink);
 
-      helper.setText(htmlContent, true);
-      emailSender.send(message);
-    } catch (jakarta.mail.MessagingException e) {
-      throw new RuntimeException("Failed to send password reset email", e);
+            helper.setText(htmlContent, true);
+            emailSender.send(message);
+        } catch (jakarta.mail.MessagingException e) {
+            throw new RuntimeException("Failed to send password reset email", e);
+        }
     }
-  }
+
+    @Override
+    public void sendWelcomeEmail(String to, String userName, String loginLink) {
+        try {
+            jakarta.mail.internet.MimeMessage message = emailSender.createMimeMessage();
+            org.springframework.mail.javamail.MimeMessageHelper helper = new org.springframework.mail.javamail.MimeMessageHelper(
+                    message, true, "UTF-8");
+
+            helper.setTo(to);
+            helper.setSubject("Welcome to Loan Management System!");
+
+            String htmlContent = String.format(
+                    """
+                            <!DOCTYPE html>
+                            <html>
+                            <head>
+                                <meta charset="UTF-8">
+                                <style>
+                                    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                                    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                                    .header { background-color: #10b981; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
+                                    .content { background-color: #f9f9f9; padding: 30px; border: 1px solid #ddd; }
+                                    .footer { background-color: #f1f1f1; padding: 15px; text-align: center; font-size: 12px; color: #666; border-radius: 0 0 5px 5px; }
+                                    .button { display: inline-block; padding: 14px 30px; background-color: #10b981; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; font-weight: bold; }
+                                    .button:hover { background-color: #059669; }
+                                    .info-box { background-color: #ecfdf5; padding: 15px; border-left: 4px solid #10b981; margin: 20px 0; border-radius: 5px; }
+                                </style>
+                            </head>
+                            <body>
+                                <div class="container">
+                                    <div class="header">
+                                        <h1>🎉 Welcome to Our Platform!</h1>
+                                    </div>
+                                    <div class="content">
+                                        <p>Dear <strong>%s</strong>,</p>
+
+                                        <p>Welcome aboard! Your account has been <strong>successfully created</strong>. We're excited to have you as part of our community.</p>
+
+                                        <p>To get started, click the button below to log in to your account:</p>
+
+                                        <div style="text-align: center;">
+                                            <a href="%s" class="button">Login to Your Account</a>
+                                        </div>
+
+                                        <div class="info-box">
+                                            <strong>✨ Getting Started:</strong>
+                                            <ul>
+                                                <li>Complete your profile information</li>
+                                                <li>Explore available loan products</li>
+                                                <li>Apply for your first loan</li>
+                                                <li>Contact support if you need any assistance</li>
+                                            </ul>
+                                        </div>
+
+                                        <p>If the button above doesn't work, copy and paste the following link into your browser:</p>
+                                        <p style="word-break: break-all; font-size: 12px; color: #666;">%s</p>
+
+                                        <p style="margin-top: 30px;">
+                                            Best regards,<br>
+                                            <strong>Loan Management Team</strong>
+                                        </p>
+                                    </div>
+                                    <div class="footer">
+                                        <p>This is an automated message. Please do not reply to this email.</p>
+                                        <p>&copy; 2026 Loan Management System. All rights reserved.</p>
+                                    </div>
+                                </div>
+                            </body>
+                            </html>
+                            """,
+                    userName, loginLink, loginLink);
+
+            helper.setText(htmlContent, true);
+            emailSender.send(message);
+        } catch (jakarta.mail.MessagingException e) {
+            throw new RuntimeException("Failed to send welcome email", e);
+        }
+    }
 }

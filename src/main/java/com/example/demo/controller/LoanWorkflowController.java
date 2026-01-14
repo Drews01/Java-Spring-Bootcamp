@@ -2,6 +2,8 @@ package com.example.demo.controller;
 
 import com.example.demo.base.ApiResponse;
 import com.example.demo.base.ResponseUtil;
+import com.example.demo.dto.ActionHistoryPageDTO;
+import com.example.demo.dto.ActionHistoryRequestDTO;
 import com.example.demo.dto.LoanActionRequest;
 import com.example.demo.dto.LoanApplicationDTO;
 import com.example.demo.dto.LoanQueueItemDTO;
@@ -15,6 +17,7 @@ import com.example.demo.repository.LoanApplicationRepository;
 import com.example.demo.repository.LoanHistoryRepository;
 import com.example.demo.repository.UserRepository;
 import com.example.demo.security.CustomUserDetails;
+import com.example.demo.service.ActionHistoryService;
 import com.example.demo.service.LoanWorkflowService;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -36,6 +39,7 @@ public class LoanWorkflowController {
   private final LoanApplicationRepository loanApplicationRepository;
   private final LoanHistoryRepository loanHistoryRepository;
   private final UserRepository userRepository;
+  private final ActionHistoryService actionHistoryService;
 
   @PostMapping("/submit")
   public ResponseEntity<ApiResponse<LoanApplicationDTO>> submitLoan(
@@ -77,6 +81,50 @@ public class LoanWorkflowController {
     // Back Office sees all branches (headquarters role)
     List<LoanQueueItemDTO> queue = getQueueItems(statuses, false);
     return ResponseUtil.ok(queue, "Back office queue retrieved successfully");
+  }
+
+  // ==================== ACTION HISTORY ENDPOINTS ====================
+
+  @GetMapping("/history/marketing")
+  @PreAuthorize("@accessControl.hasMenu('LOAN_REVIEW')")
+  public ResponseEntity<ApiResponse<ActionHistoryPageDTO>> getMarketingHistory(
+      @RequestParam(required = false) Integer month,
+      @RequestParam(required = false) Integer year,
+      @RequestParam(required = false, defaultValue = "0") Integer page,
+      @RequestParam(required = false, defaultValue = "20") Integer size) {
+    Long actorId = getCurrentUserId();
+    ActionHistoryRequestDTO request =
+        ActionHistoryRequestDTO.builder().month(month).year(year).page(page).size(size).build();
+    ActionHistoryPageDTO history = actionHistoryService.getMarketingHistory(actorId, request);
+    return ResponseUtil.ok(history, "Marketing action history retrieved successfully");
+  }
+
+  @GetMapping("/history/branch-manager")
+  @PreAuthorize("@accessControl.hasMenu('LOAN_APPROVE')")
+  public ResponseEntity<ApiResponse<ActionHistoryPageDTO>> getBranchManagerHistory(
+      @RequestParam(required = false) Integer month,
+      @RequestParam(required = false) Integer year,
+      @RequestParam(required = false, defaultValue = "0") Integer page,
+      @RequestParam(required = false, defaultValue = "20") Integer size) {
+    Long actorId = getCurrentUserId();
+    ActionHistoryRequestDTO request =
+        ActionHistoryRequestDTO.builder().month(month).year(year).page(page).size(size).build();
+    ActionHistoryPageDTO history = actionHistoryService.getBranchManagerHistory(actorId, request);
+    return ResponseUtil.ok(history, "Branch manager action history retrieved successfully");
+  }
+
+  @GetMapping("/history/back-office")
+  @PreAuthorize("@accessControl.hasMenu('LOAN_DISBURSE')")
+  public ResponseEntity<ApiResponse<ActionHistoryPageDTO>> getBackOfficeHistory(
+      @RequestParam(required = false) Integer month,
+      @RequestParam(required = false) Integer year,
+      @RequestParam(required = false, defaultValue = "0") Integer page,
+      @RequestParam(required = false, defaultValue = "20") Integer size) {
+    Long actorId = getCurrentUserId();
+    ActionHistoryRequestDTO request =
+        ActionHistoryRequestDTO.builder().month(month).year(year).page(page).size(size).build();
+    ActionHistoryPageDTO history = actionHistoryService.getBackOfficeHistory(actorId, request);
+    return ResponseUtil.ok(history, "Back office action history retrieved successfully");
   }
 
   @GetMapping("/{loanId}/allowed-actions")

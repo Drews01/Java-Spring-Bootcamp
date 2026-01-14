@@ -60,6 +60,196 @@ app:
       expiration-seconds: 86400  # 24 hours
 ```
 
+---
+
+## Understanding JWT Structure
+
+A JWT (JSON Web Token) consists of **three parts** separated by dots (`.`):
+
+```
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyMTIzIiwicm9sZSI6IkFETUlOIiwiaWF0IjoxNzA0MDY3MjAwLCJleHAiOjE3MDQxNTM2MDB9.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+└──────────── Header ────────────┘.└────────────────────────── Payload ──────────────────────────┘.└───────── Signature ─────────┘
+```
+
+### 1. Header
+
+The **header** contains metadata about the token type and signing algorithm.
+
+```json
+{
+  "alg": "HS256",
+  "typ": "JWT"
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `alg` | Signing algorithm (e.g., `HS256`, `RS256`) |
+| `typ` | Token type (always `JWT`) |
+
+**Common Algorithms**:
+| Algorithm | Type | Description |
+|-----------|------|-------------|
+| `HS256` | Symmetric | HMAC with SHA-256 (shared secret) |
+| `HS384` | Symmetric | HMAC with SHA-384 |
+| `HS512` | Symmetric | HMAC with SHA-512 |
+| `RS256` | Asymmetric | RSA with SHA-256 (public/private key) |
+
+### 2. Payload (Claims)
+
+The **payload** contains **claims** - statements about the user and additional data.
+
+```json
+{
+  "sub": "user123",
+  "email": "user@example.com",
+  "role": "ADMIN",
+  "iat": 1704067200,
+  "exp": 1704153600
+}
+```
+
+#### Registered Claims (Standard)
+
+| Claim | Full Name | Description |
+|-------|-----------|-------------|
+| `sub` | Subject | User identifier (username or user ID) |
+| `iat` | Issued At | Timestamp when token was created |
+| `exp` | Expiration | Timestamp when token expires |
+| `iss` | Issuer | Who issued the token (your app name) |
+| `aud` | Audience | Intended recipient of the token |
+| `nbf` | Not Before | Token not valid before this time |
+| `jti` | JWT ID | Unique identifier for the token |
+
+#### Custom Claims (Your Data)
+
+You can add any custom data to the payload:
+
+```json
+{
+  "sub": "user123",
+  "role": "ADMIN",
+  "permissions": ["READ", "WRITE", "DELETE"],
+  "department": "Engineering",
+  "iat": 1704067200,
+  "exp": 1704153600
+}
+```
+
+> [!WARNING]
+> **Never store sensitive data in the payload!** The payload is only Base64-encoded, NOT encrypted. Anyone can decode and read it.
+
+### 3. Signature
+
+The **signature** ensures the token hasn't been tampered with.
+
+```
+HMACSHA256(
+  base64UrlEncode(header) + "." + base64UrlEncode(payload),
+  secret
+)
+```
+
+**How it works**:
+1. Server creates token → signs with secret key
+2. Client sends token back → server verifies signature
+3. If payload is modified → signature becomes invalid
+
+### Java Implementation Example
+
+#### Creating Claims in JwtService
+
+```java
+@Service
+public class JwtService {
+
+    @Value("${app.security.jwt.secret}")
+    private String secretKey;
+
+    @Value("${app.security.jwt.expiration-seconds}")
+    private long expirationSeconds;
+
+    public String generateToken(String username, Map<String, Object> extraClaims) {
+        return Jwts.builder()
+                // Header is set automatically by the library
+                
+                // Payload - Custom Claims
+                .claims(extraClaims)
+                
+                // Payload - Registered Claims
+                .subject(username)                                    // sub
+                .issuedAt(new Date())                                 // iat
+                .expiration(new Date(System.currentTimeMillis() 
+                    + expirationSeconds * 1000))                      // exp
+                .issuer("my-spring-app")                              // iss (optional)
+                
+                // Signature
+                .signWith(getSigningKey(), Jwts.SIG.HS256)
+                .compact();
+    }
+
+    public String generateTokenWithRoles(User user) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("email", user.getEmail());
+        claims.put("roles", user.getRoles().stream()
+                .map(Role::getName)
+                .collect(Collectors.toList()));
+        
+        return generateToken(user.getUsername(), claims);
+    }
+}
+```
+
+#### Extracting Claims
+
+```java
+public Claims extractAllClaims(String token) {
+    return Jwts.parser()
+            .verifyWith(getSigningKey())
+            .build()
+            .parseSignedClaims(token)
+            .getPayload();
+}
+
+public String extractUsername(String token) {
+    return extractAllClaims(token).getSubject();  // Gets "sub" claim
+}
+
+public List<String> extractRoles(String token) {
+    Claims claims = extractAllClaims(token);
+    return claims.get("roles", List.class);  // Gets custom "roles" claim
+}
+
+public Date extractExpiration(String token) {
+    return extractAllClaims(token).getExpiration();  // Gets "exp" claim
+}
+```
+
+### Token Lifecycle Diagram
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Server
+    participant Database
+    
+    Note over Client,Server: Registration/Login
+    Client->>Server: POST /auth/login (credentials)
+    Server->>Database: Validate user
+    Database-->>Server: User found
+    Server->>Server: Create JWT (Header + Payload + Signature)
+    Server-->>Client: Return JWT token
+    
+    Note over Client,Server: Protected Request
+    Client->>Server: GET /api/data (Authorization: Bearer token)
+    Server->>Server: Extract & verify JWT signature
+    Server->>Server: Check expiration (exp claim)
+    Server->>Server: Extract user info (sub, roles)
+    Server-->>Client: Return protected data
+```
+
+---
+
 ### 3. Business Logic
 
 #### ✅ AuthService.java
@@ -313,6 +503,149 @@ try {
 ✅ **Password Hiding**: `@JsonIgnore` on User.password field  
 ✅ **Error Handling**: No sensitive data in error responses  
 ✅ **CORS Ready**: Can be configured for production
+
+---
+
+## Password Hashing with BCrypt
+
+Password hashing is essential for secure authentication. **Never store plain-text passwords!** Spring Security provides `BCryptPasswordEncoder` for secure password hashing.
+
+### How BCrypt Works
+
+BCrypt is a password hashing algorithm that:
+- Automatically generates a **random salt** for each password
+- Uses a **cost factor** (work factor) to slow down brute-force attacks
+- Produces a **60-character hash** that includes the salt
+
+### Step 1: Configure Password Encoder Bean
+
+Add the `PasswordEncoder` bean in your `SecurityConfig.java`:
+
+```java
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder(); // Default strength: 10
+    }
+    
+    // With custom strength (4-31, higher = slower but more secure)
+    @Bean
+    public PasswordEncoder passwordEncoderWithStrength() {
+        return new BCryptPasswordEncoder(12); // Strength: 12
+    }
+}
+```
+
+### Step 2: Hash Password During Registration
+
+In your `AuthService.java`, inject and use the `PasswordEncoder`:
+
+```java
+@Service
+public class AuthService {
+
+    private final PasswordEncoder passwordEncoder;
+    private final UserRepository userRepository;
+
+    public AuthService(PasswordEncoder passwordEncoder, UserRepository userRepository) {
+        this.passwordEncoder = passwordEncoder;
+        this.userRepository = userRepository;
+    }
+
+    public User register(RegisterRequest request) {
+        // Hash the password before saving
+        String hashedPassword = passwordEncoder.encode(request.getPassword());
+        
+        User user = new User();
+        user.setUsername(request.getUsername());
+        user.setEmail(request.getEmail());
+        user.setPassword(hashedPassword); // Store hashed password
+        
+        return userRepository.save(user);
+    }
+}
+```
+
+### Step 3: Verify Password During Login
+
+Use the `matches()` method to verify passwords:
+
+```java
+public AuthResponse login(AuthRequest request) {
+    User user = userRepository.findByUsername(request.getUsername())
+            .orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
+
+    // Compare plain-text password with stored hash
+    if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+        throw new BadCredentialsException("Invalid credentials");
+    }
+
+    // Generate JWT token if password matches
+    String token = jwtService.generateToken(user.getUsername());
+    return new AuthResponse(token, user);
+}
+```
+
+### Example: Hashed Password Output
+
+```
+Plain text:  password123
+BCrypt hash: $2a$10$N9qo8uLOickgx2ZMRZoMye.IjqQBrkH1Qo2w5jT5TY5zKIhvOJN4G
+             └─┬─┘└┬┘└──────────────────────────┬────────────────────────────┘
+               │   │                             └── Hash + Salt
+               │   └── Cost factor (10)
+               └── BCrypt algorithm version
+```
+
+### Best Practices
+
+| Practice | Description |
+|----------|-------------|
+| **Never log passwords** | Don't log plain-text or hashed passwords |
+| **Use strength ≥ 10** | Default is 10; increase for higher security |
+| **Hide password field** | Use `@JsonIgnore` on User entity password field |
+| **Use authentication manager** | Let Spring Security handle password verification |
+
+### Using AuthenticationManager (Recommended)
+
+For cleaner code, use Spring's `AuthenticationManager`:
+
+```java
+@Service
+public class AuthService {
+
+    private final AuthenticationManager authenticationManager;
+
+    public AuthResponse login(AuthRequest request) {
+        // Spring Security handles password verification automatically
+        Authentication authentication = authenticationManager.authenticate(
+            new UsernamePasswordAuthenticationToken(
+                request.getUsernameOrEmail(),
+                request.getPassword()
+            )
+        );
+        
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        String token = jwtService.generateToken(userDetails.getUsername());
+        
+        return new AuthResponse(token, userDetails.getUser());
+    }
+}
+```
+
+### Common Errors
+
+| Error | Cause | Solution |
+|-------|-------|----------|
+| `No PasswordEncoder mapped` | Missing PasswordEncoder bean | Add `@Bean` for `BCryptPasswordEncoder` |
+| Password always fails | Storing plain-text, comparing with hash | Always encode during registration |
+| Hash looks different each time | BCrypt uses random salt (this is normal!) | Use `matches()` to compare, not `equals()` |
 
 ---
 

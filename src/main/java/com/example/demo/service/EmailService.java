@@ -6,4 +6,6 @@ public interface EmailService {
   void sendLoanDisbursementEmail(String to, String userName, Long loanId, Double amount);
 
   void sendPasswordResetEmail(String to, String userName, String resetLink);
+
+  void sendWelcomeEmail(String to, String userName, String loginLink);
 }
