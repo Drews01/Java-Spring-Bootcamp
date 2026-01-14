@@ -52,7 +52,8 @@ public class SecurityConfig {
                 "/auth/login",
                 "/auth/register",
                 "/auth/forgot-password",
-                "/auth/reset-password"))
+                "/auth/reset-password",
+                "/api/user-profiles/upload-ktp"))
         // CORS Configuration
         .cors(cors -> cors.configurationSource(corsConfigurationSource()))
         // Authorization rules

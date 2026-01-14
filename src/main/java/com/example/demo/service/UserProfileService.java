@@ -26,24 +26,23 @@ public class UserProfileService {
 
   private final UserProfileRepository userProfileRepository;
   private final UserRepository userRepository;
+  private final FileValidationService fileValidationService;
 
   @Transactional
   public UserProfileDTO createUserProfile(UserProfileDTO dto) {
-    User user =
-        userRepository
-            .findById(dto.getUserId())
-            .orElseThrow(() -> new RuntimeException("User not found with id: " + dto.getUserId()));
+    User user = userRepository
+        .findById(dto.getUserId())
+        .orElseThrow(() -> new RuntimeException("User not found with id: " + dto.getUserId()));
 
-    UserProfile userProfile =
-        UserProfile.builder()
-            .user(user)
-            .address(dto.getAddress())
-            .nik(dto.getNik())
-            .ktpPath(dto.getKtpPath())
-            .phoneNumber(dto.getPhoneNumber())
-            .accountNumber(dto.getAccountNumber())
-            .bankName(dto.getBankName())
-            .build();
+    UserProfile userProfile = UserProfile.builder()
+        .user(user)
+        .address(dto.getAddress())
+        .nik(dto.getNik())
+        .ktpPath(dto.getKtpPath())
+        .phoneNumber(dto.getPhoneNumber())
+        .accountNumber(dto.getAccountNumber())
+        .bankName(dto.getBankName())
+        .build();
 
     UserProfile saved = userProfileRepository.save(userProfile);
     return convertToDTO(saved);
@@ -51,11 +50,10 @@ public class UserProfileService {
 
   @Transactional(readOnly = true)
   public UserProfileDTO getUserProfile(Long userId) {
-    UserProfile userProfile =
-        userProfileRepository
-            .findById(userId)
-            .orElseThrow(
-                () -> new RuntimeException("UserProfile not found for user id: " + userId));
+    UserProfile userProfile = userProfileRepository
+        .findById(userId)
+        .orElseThrow(
+            () -> new RuntimeException("UserProfile not found for user id: " + userId));
     return convertToDTO(userProfile);
   }
 
@@ -68,11 +66,10 @@ public class UserProfileService {
 
   @Transactional
   public UserProfileDTO updateUserProfile(Long userId, UserProfileDTO dto) {
-    UserProfile userProfile =
-        userProfileRepository
-            .findById(userId)
-            .orElseThrow(
-                () -> new RuntimeException("UserProfile not found for user id: " + userId));
+    UserProfile userProfile = userProfileRepository
+        .findById(userId)
+        .orElseThrow(
+            () -> new RuntimeException("UserProfile not found for user id: " + userId));
 
     userProfile.setAddress(dto.getAddress());
     userProfile.setNik(dto.getNik());
@@ -98,6 +95,9 @@ public class UserProfileService {
       throw new RuntimeException("Failed to store empty file");
     }
 
+    // Validate File
+    fileValidationService.validateFile(file);
+
     try {
       // Create uploads directory if not exists
       Path uploadLocation = Paths.get("uploads");
@@ -113,20 +113,18 @@ public class UserProfileService {
       Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
 
       // Update UserProfile
-      UserProfile userProfile =
-          userProfileRepository
-              .findById(userId)
-              .orElseThrow(
-                  () -> new RuntimeException("UserProfile not found for user id: " + userId));
+      UserProfile userProfile = userProfileRepository
+          .findById(userId)
+          .orElseThrow(
+              () -> new RuntimeException("UserProfile not found for user id: " + userId));
 
       userProfile.setKtpPath(targetPath.toString());
       userProfileRepository.save(userProfile);
 
-      String fileDownloadUri =
-          ServletUriComponentsBuilder.fromCurrentContextPath()
-              .path("/uploads/")
-              .path(fileName)
-              .toUriString();
+      String fileDownloadUri = ServletUriComponentsBuilder.fromCurrentContextPath()
+          .path("/uploads/")
+          .path(fileName)
+          .toUriString();
 
       return UploadImageResponse.builder()
           .fileName(fileName)
@@ -144,20 +142,20 @@ public class UserProfileService {
    * Check if user profile is complete with all required fields.
    *
    * @param userId the user ID to check
-   * @return true if profile exists and all required fields are filled, false otherwise
+   * @return true if profile exists and all required fields are filled, false
+   *         otherwise
    */
   @Transactional(readOnly = true)
   public boolean isProfileComplete(Long userId) {
     return userProfileRepository
         .findById(userId)
         .map(
-            profile ->
-                isNotBlank(profile.getAddress())
-                    && isNotBlank(profile.getNik())
-                    && isNotBlank(profile.getKtpPath())
-                    && isNotBlank(profile.getPhoneNumber())
-                    && isNotBlank(profile.getAccountNumber())
-                    && isNotBlank(profile.getBankName()))
+            profile -> isNotBlank(profile.getAddress())
+                && isNotBlank(profile.getNik())
+                && isNotBlank(profile.getKtpPath())
+                && isNotBlank(profile.getPhoneNumber())
+                && isNotBlank(profile.getAccountNumber())
+                && isNotBlank(profile.getBankName()))
         .orElse(false);
   }
 
