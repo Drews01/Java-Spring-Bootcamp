@@ -65,12 +65,18 @@ Download a successfully uploaded file and inspect the response headers.
 curl -I -X GET http://localhost:8081/uploads/{filename}
 ```
 
-**Expected Headers:**
-```
-X-Content-Type-Options: nosniff
-Content-Security-Policy: default-src 'none'
-Content-Type: application/octet-stream (or specific type)
-```
+
+### 6. Testing with CSRF Enabled (Postman)
+If you have removed the upload endpoint from `ignoringRequestMatchers` in `SecurityConfig`, you MUST provide a CSRF token.
+
+1.  **Get Token:** Make a `GET` request to `http://localhost:8081/api/csrf-token` (or login).
+2.  **Extract Cookie:** Look at the **Cookies** tab in the response. Copy the value of the `XSRF-TOKEN` cookie.
+3.  **Add Header:** In your `POST` request to `upload-ktp`, add a header:
+    *   **Key:** `X-XSRF-TOKEN`
+    *   **Value:** [Paste the token value from the cookie]
+
+> **Note:** The Bearer token handles **Authentication** (who you are), while the XSRF-TOKEN handles **CSRF Protection** (security against malicious cross-site requests). You need **BOTH** for non-GET requests when CSRF is enabled.
+
 
 ---
 
