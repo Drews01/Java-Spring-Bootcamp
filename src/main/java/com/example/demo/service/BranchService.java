@@ -11,6 +11,8 @@ import com.example.demo.repository.UserRepository;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,10 +24,8 @@ public class BranchService {
   private final UserRepository userRepository;
 
   /** Get all branches (including inactive) */
-  public List<BranchDTO> getAllBranches() {
-    return branchRepository.findAll().stream()
-        .map(BranchDTO::fromEntity)
-        .collect(Collectors.toList());
+  public Page<BranchDTO> getAllBranches(Pageable pageable) {
+    return branchRepository.findAll(pageable).map(BranchDTO::fromEntity);
   }
 
   /** Get only active branches */

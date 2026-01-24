@@ -769,3 +769,63 @@ Body: {
 > [!NOTE]
 > This validation ensures that even if a user has a valid JWT token, they cannot interfere with another role's workflow. The loan must be in the correct status (bucket) for the user's role before any action is allowed.
 
+### 7.6 Action History API
+
+The system provides **role-specific endpoints** to view action history with **pagination and filtering**. Users can filter their action history by month and year.
+
+#### Endpoints:
+| Role | Endpoint | Permission |
+|------|----------|------------|
+| Marketing | `/api/loan-workflow/history/marketing` | `LOAN_REVIEW` |
+| Branch Manager | `/api/loan-workflow/history/branch-manager` | `LOAN_APPROVE` |
+| Back Office | `/api/loan-workflow/history/back-office` | `LOAN_DISBURSE` |
+
+#### Query Parameters:
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `month` | Integer | No | - | Filter by month (1-12) |
+| `year` | Integer | No | - | Filter by year (e.g., 2026) |
+| `page` | Integer | No | 0 | Page number (0-indexed) |
+| `size` | Integer | No | 20 | Items per page |
+
+#### Testing Action History:
+
+**Step 1: Perform some actions**
+Make sure you have processed some loans (Submitted, Commented, Approved, Disbursed) so there is history to view.
+
+**Step 2: Fetch Marketing History (Filtered)**
+```bash
+GET /api/loan-workflow/history/marketing?year=2026&page=0&size=10
+Authorization: Bearer <marketing_token>
+```
+
+**Step 3: Response Example**
+```json
+{
+  "success": true,
+  "data": {
+    "content": [
+      {
+        "loanApplicationId": 1,
+        "action": "COMMENT_FORWARD",
+        "actionDisplayName": "Forwarded with Comment",
+        "actionDate": "2026-01-15T10:30:00",
+        "productName": "Personal Loan",
+        "amount": 5000000.0,
+        "username": "john_doe",
+        "resultingStatus": "WAITING_APPROVAL",
+        "comment": "Docs verified"
+      }
+    ],
+    "page": 0,
+    "size": 10,
+    "totalElements": 1,
+    "totalPages": 1
+  }
+}
+```
+
+> [!NOTE]
+> The history API only returns actions that are relevant to the specific role (e.g., Marketing sees submissions and comments, Branch Manager sees approvals).
+
+

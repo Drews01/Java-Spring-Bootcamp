@@ -19,6 +19,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -129,18 +131,15 @@ public class RbacService {
     MENU_CATEGORY_MAP.put("RBAC_CATEGORIES", "RBAC Management");
   }
 
-  public List<RoleAccessSummaryDTO> getAllRolesWithSummary() {
-    List<Role> roles = roleRepository.findAll();
+  public Page<RoleAccessSummaryDTO> getAllRolesWithSummary(Pageable pageable) {
+    Page<Role> rolesPage = roleRepository.findByDeletedFalse(pageable);
     int totalMenus = (int) menuRepository.count();
 
-    return roles.stream()
-        .map(
-            role -> {
-              int assignedMenus = roleMenuRepository.findByRoleId(role.getId()).size();
-              return new RoleAccessSummaryDTO(
-                  role.getId(), role.getName(), totalMenus, assignedMenus);
-            })
-        .collect(Collectors.toList());
+    return rolesPage.map(
+        role -> {
+          int assignedMenus = roleMenuRepository.findByRoleId(role.getId()).size();
+          return new RoleAccessSummaryDTO(role.getId(), role.getName(), totalMenus, assignedMenus);
+        });
   }
 
   public RoleAccessDTO getRoleAccess(Long roleId) {

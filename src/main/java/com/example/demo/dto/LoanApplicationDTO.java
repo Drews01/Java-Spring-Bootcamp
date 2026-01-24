@@ -19,6 +19,8 @@ public class LoanApplicationDTO {
   private Double interestRateApplied;
   private Double totalAmountToPay; // Total repayment amount (principal + interest)
   private String currentStatus;
+  private String displayStatus;
+  private String productName;
   private LocalDateTime createdAt;
   private LocalDateTime updatedAt;
 }

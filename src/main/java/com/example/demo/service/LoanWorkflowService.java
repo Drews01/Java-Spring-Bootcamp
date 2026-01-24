@@ -10,6 +10,7 @@ import com.example.demo.entity.Product;
 import com.example.demo.entity.User;
 import com.example.demo.enums.LoanAction;
 import com.example.demo.enums.LoanStatus;
+import com.example.demo.exception.BusinessException;
 import com.example.demo.repository.BranchRepository;
 import com.example.demo.repository.LoanApplicationRepository;
 import com.example.demo.repository.LoanHistoryRepository;
@@ -49,31 +50,34 @@ public class LoanWorkflowService {
     // Get user's current tier product (auto-assigns Bronze if not assigned)
     Product tierProduct = loanEligibilityService.getCurrentTierProduct(userId);
     if (tierProduct == null) {
-      throw new RuntimeException("No tier product available for user");
+      throw new BusinessException("No tier product available for user", "NO_TIER_AVAILABLE");
     }
 
     // Validate user profile is complete before allowing loan submission
     if (!userProfileService.isProfileComplete(userId)) {
-      throw new IllegalStateException(
+      throw new BusinessException(
           "Cannot submit loan. Your profile is incomplete. "
               + "Please complete all required fields: address, NIK, KTP document, phone number, account number, and bank name. "
-              + "Update your profile at /api/user-profiles");
+              + "Update your profile at /api/user-profiles",
+          "PROFILE_INCOMPLETE");
     }
 
     // Check if user has any active (pending) loans
     if (loanApplicationRepository.hasActiveLoan(userId)) {
-      throw new IllegalStateException(
+      throw new BusinessException(
           "Cannot submit new loan. You already have an active loan application that is being processed. "
-              + "Please wait for your current loan to be disbursed, paid, or rejected before submitting a new one.");
+              + "Please wait for your current loan to be disbursed, paid, or rejected before submitting a new one.",
+          "ACTIVE_LOAN_EXISTS");
     }
 
     // Check credit limit eligibility
     if (!loanEligibilityService.canApplyForLoan(userId, request.getAmount())) {
       Double remainingLimit = loanEligibilityService.getRemainingCreditLimit(userId);
-      throw new RuntimeException(
+      throw new BusinessException(
           String.format(
               "Loan amount %.2f exceeds remaining credit limit %.2f for %s tier",
-              request.getAmount(), remainingLimit, tierProduct.getName()));
+              request.getAmount(), remainingLimit, tierProduct.getName()),
+          "CREDIT_LIMIT_EXCEEDED");
     }
 
     // Use tier product if no specific product provided, otherwise validate the
@@ -92,7 +96,7 @@ public class LoanWorkflowService {
 
     // Validate and fetch branch
     if (request.getBranchId() == null) {
-      throw new IllegalArgumentException("Branch ID is required for loan submission");
+      throw new BusinessException("Branch ID is required for loan submission", "BRANCH_REQUIRED");
     }
     Branch branch =
         branchRepository

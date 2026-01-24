@@ -1,7 +1,6 @@
 package com.example.demo.service;
 
 import com.example.demo.dto.ActionHistoryDTO;
-import com.example.demo.dto.ActionHistoryPageDTO;
 import com.example.demo.dto.ActionHistoryRequestDTO;
 import com.example.demo.entity.LoanApplication;
 import com.example.demo.entity.LoanHistory;
@@ -13,7 +12,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -50,22 +48,23 @@ public class ActionHistoryService {
   }
 
   @Transactional(readOnly = true)
-  public ActionHistoryPageDTO getMarketingHistory(Long actorId, ActionHistoryRequestDTO request) {
+  public Page<ActionHistoryDTO> getMarketingHistory(Long actorId, ActionHistoryRequestDTO request) {
     return getActionHistory(actorId, MARKETING_ACTIONS, request);
   }
 
   @Transactional(readOnly = true)
-  public ActionHistoryPageDTO getBranchManagerHistory(
+  public Page<ActionHistoryDTO> getBranchManagerHistory(
       Long actorId, ActionHistoryRequestDTO request) {
     return getActionHistory(actorId, BRANCH_MANAGER_ACTIONS, request);
   }
 
   @Transactional(readOnly = true)
-  public ActionHistoryPageDTO getBackOfficeHistory(Long actorId, ActionHistoryRequestDTO request) {
+  public Page<ActionHistoryDTO> getBackOfficeHistory(
+      Long actorId, ActionHistoryRequestDTO request) {
     return getActionHistory(actorId, BACK_OFFICE_ACTIONS, request);
   }
 
-  private ActionHistoryPageDTO getActionHistory(
+  private Page<ActionHistoryDTO> getActionHistory(
       Long actorId, List<String> actions, ActionHistoryRequestDTO request) {
 
     int page = request.getPage() != null ? request.getPage() : 0;
@@ -87,16 +86,7 @@ public class ActionHistoryService {
       historyPage = loanHistoryRepository.findByActorAndActions(actorId, actions, pageable);
     }
 
-    List<ActionHistoryDTO> content =
-        historyPage.getContent().stream().map(this::convertToDTO).collect(Collectors.toList());
-
-    return ActionHistoryPageDTO.builder()
-        .content(content)
-        .page(historyPage.getNumber())
-        .size(historyPage.getSize())
-        .totalElements(historyPage.getTotalElements())
-        .totalPages(historyPage.getTotalPages())
-        .build();
+    return historyPage.map(this::convertToDTO);
   }
 
   private ActionHistoryDTO convertToDTO(LoanHistory loanHistory) {

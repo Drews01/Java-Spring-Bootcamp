@@ -67,6 +67,17 @@ public class GlobalExceptionHandler {
     return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
   }
 
+  /** Handle resource not found */
+  @ExceptionHandler(ResourceNotFoundException.class)
+  public ResponseEntity<ApiResponse<Void>> handleResourceNotFound(ResourceNotFoundException ex) {
+    ErrorDetails errorDetails = ErrorDetails.builder().errorCode("RESOURCE_NOT_FOUND").build();
+
+    ApiResponse<Void> response =
+        ApiResponse.error(ex.getMessage(), errorDetails, HttpStatus.NOT_FOUND.value());
+
+    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+  }
+
   /** Handle duplicate username/email */
   @ExceptionHandler(DataIntegrityViolationException.class)
   public ResponseEntity<ApiResponse<Void>> handleDataIntegrityViolation(
@@ -95,6 +106,17 @@ public class GlobalExceptionHandler {
         ApiResponse.error(ex.getMessage(), errorDetails, HttpStatus.BAD_REQUEST.value());
 
     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+  }
+
+  /** Handle business logic exceptions with custom codes */
+  @ExceptionHandler(BusinessException.class)
+  public ResponseEntity<ApiResponse<Void>> handleBusinessException(BusinessException ex) {
+    ErrorDetails errorDetails = ErrorDetails.builder().errorCode(ex.getErrorCode()).build();
+
+    ApiResponse<Void> response =
+        ApiResponse.error(ex.getMessage(), errorDetails, ex.getStatus().value());
+
+    return ResponseEntity.status(ex.getStatus()).body(response);
   }
 
   /** Handle generic exceptions */

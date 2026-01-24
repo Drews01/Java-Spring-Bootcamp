@@ -17,30 +17,30 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/uploads")
 public class FileController {
 
-    private final Path fileStorageLocation = Paths.get("uploads").toAbsolutePath().normalize();
+  private final Path fileStorageLocation = Paths.get("uploads").toAbsolutePath().normalize();
 
-    @GetMapping("/{fileName:.+}")
-    public ResponseEntity<Resource> downloadFile(@PathVariable String fileName) {
-        try {
-            Path filePath = this.fileStorageLocation.resolve(fileName).normalize();
-            Resource resource = new UrlResource(filePath.toUri());
+  @GetMapping("/{fileName:.+}")
+  public ResponseEntity<Resource> downloadFile(@PathVariable String fileName) {
+    try {
+      Path filePath = this.fileStorageLocation.resolve(fileName).normalize();
+      Resource resource = new UrlResource(filePath.toUri());
 
-            if (resource.exists()) {
-                String contentType = "application/octet-stream"; // Default fallback
+      if (resource.exists()) {
+        String contentType = "application/octet-stream"; // Default fallback
 
-                return ResponseEntity.ok()
-                        .contentType(MediaType.parseMediaType(contentType))
-                        .header(
-                                HttpHeaders.CONTENT_DISPOSITION,
-                                "attachment; filename=\"" + resource.getFilename() + "\"")
-                        .header("X-Content-Type-Options", "nosniff") // Prevent MIME sniffing
-                        .header("Content-Security-Policy", "default-src 'none'") // Prevent execution
-                        .body(resource);
-            } else {
-                return ResponseEntity.notFound().build();
-            }
-        } catch (MalformedURLException e) {
-            return ResponseEntity.badRequest().build();
-        }
+        return ResponseEntity.ok()
+            .contentType(MediaType.parseMediaType(contentType))
+            .header(
+                HttpHeaders.CONTENT_DISPOSITION,
+                "attachment; filename=\"" + resource.getFilename() + "\"")
+            .header("X-Content-Type-Options", "nosniff") // Prevent MIME sniffing
+            .header("Content-Security-Policy", "default-src 'none'") // Prevent execution
+            .body(resource);
+      } else {
+        return ResponseEntity.notFound().build();
+      }
+    } catch (MalformedURLException e) {
+      return ResponseEntity.badRequest().build();
     }
+  }
 }

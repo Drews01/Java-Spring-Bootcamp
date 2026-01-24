@@ -266,6 +266,46 @@ curl -X POST http://localhost:8080/auth/logout \
   -b cookies.txt -c cookies.txt
 ```
 
+### Postman Testing Guide: User Profile Submission
+
+**Prerequisites:**
+1.  **Login**: `POST /auth/login` to get the `jwt` cookie.
+2.  **Get CSRF Token**: `GET /api/csrf-token` to get the `XSRF-TOKEN` cookie.
+3.  **Setup Variable**: Copy the `XSRF-TOKEN` cookie value (Note: **Do not** use the masked token from the response body).
+
+#### Scenario A: Create/Update Profile (JSON)
+**Endpoint**: `POST /api/user-profiles`
+
+1.  **Headers**:
+    *   `X-XSRF-TOKEN`: *[Paste Raw Cookie Value]*
+    *   `Content-Type`: `application/json`
+2.  **Body (raw JSON)**:
+    ```json
+    {
+      "address": "Jl. Sudirman No. 123",
+      "nik": "3174011111",
+      "phoneNumber": "+628123456789",
+      "accountNumber": "1234567890",
+      "bankName": "Bank BCA"
+    }
+    ```
+
+#### Scenario B: Upload Profile Picture (Multipart)
+**Endpoint**: `POST /api/user-profiles/upload-ktp`
+
+> [!IMPORTANT]
+> **Common Error**: `500 Internal Server Error: Current request is not a multipart request`.
+> This happens if you manually set `Content-Type: multipart/form-data`. **Postman must set this automatically.**
+
+1.  **Headers**:
+    *   `X-XSRF-TOKEN`: *[Paste Raw Cookie Value]*
+    *   ❌ **DELETE** any `Content-Type` header (ensure it is NOT checked).
+2.  **Body**:
+    *   Select **form-data**.
+    *   Key: `file` -> Change type from "Text" to **"File"**.
+    *   Value: Select an image file.
+3.  **Send Request**.
+
 ### Browser DevTools Verification
 
 1. **Application Tab** → Cookies → Check for:

@@ -114,8 +114,34 @@ public class LoanApplicationService {
         .tenureMonths(loanApplication.getTenureMonths())
         .interestRateApplied(loanApplication.getInterestRateApplied())
         .currentStatus(loanApplication.getCurrentStatus())
+        .displayStatus(mapToDisplayStatus(loanApplication.getCurrentStatus()))
+        .productName(loanApplication.getProduct().getName())
+        .totalAmountToPay(loanApplication.getTotalAmountToPay())
         .createdAt(loanApplication.getCreatedAt())
         .updatedAt(loanApplication.getUpdatedAt())
         .build();
+  }
+
+  private String mapToDisplayStatus(String status) {
+    if (status == null) {
+      return "Unknown";
+    }
+    switch (status) {
+      case "SUBMITTED":
+      case "IN_REVIEW":
+        return "Review Marketing";
+      case "WAITING_APPROVAL":
+        return "Review Branch Manager";
+      case "APPROVED_WAITING_DISBURSEMENT":
+        return "Waiting Disbursement";
+      case "DISBURSED":
+        return "Active";
+      case "PAID":
+        return "Completed";
+      case "REJECTED":
+        return "Rejected";
+      default:
+        return status;
+    }
   }
 }

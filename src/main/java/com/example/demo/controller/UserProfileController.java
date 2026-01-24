@@ -42,8 +42,7 @@ public class UserProfileController {
       return ResponseUtil.ok(updated, "User profile updated successfully");
     } catch (RuntimeException e) {
       // Profile doesn't exist, create it
-      dto.setUserId(authenticatedUserId); // Override with authenticated user's ID
-      UserProfileDTO created = userProfileService.createUserProfile(dto);
+      UserProfileDTO created = userProfileService.createUserProfile(authenticatedUserId, dto);
       return ResponseUtil.created(created, "User profile created successfully");
     }
   }

@@ -3,10 +3,14 @@ package com.example.demo.controller;
 import com.example.demo.base.ApiResponse;
 import com.example.demo.base.ResponseUtil;
 import com.example.demo.dto.UserProductDTO;
+import com.example.demo.dto.UserTierLimitDTO;
+import com.example.demo.entity.User;
+import com.example.demo.repository.UserRepository;
 import com.example.demo.service.UserProductService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -15,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 public class UserProductController {
 
   private final UserProductService userProductService;
+  private final UserRepository userRepository;
 
   @PostMapping
   public ResponseEntity<ApiResponse<UserProductDTO>> createUserProduct(
@@ -61,5 +66,27 @@ public class UserProductController {
   public ResponseEntity<ApiResponse<Void>> deleteUserProduct(@PathVariable Long userProductId) {
     userProductService.deleteUserProduct(userProductId);
     return ResponseUtil.okMessage("User product deleted successfully");
+  }
+
+  /**
+   * Get the current authenticated user's product tier and credit limit information.
+   *
+   * @return UserTierLimitDTO with tier info, limits, and upgrade progress
+   */
+  @GetMapping("/my-tier")
+  public ResponseEntity<ApiResponse<UserTierLimitDTO>> getMyTierAndLimits() {
+    String username = SecurityContextHolder.getContext().getAuthentication().getName();
+    User user =
+        userRepository
+            .findByUsername(username)
+            .orElseThrow(() -> new RuntimeException("User not found: " + username));
+
+    UserTierLimitDTO tierInfo = userProductService.getCurrentUserTierAndLimits(user.getId());
+
+    if (tierInfo == null) {
+      return ResponseUtil.ok(null, "No active tier found. User needs to subscribe to a product.");
+    }
+
+    return ResponseUtil.ok(tierInfo, "User tier and limits retrieved successfully");
   }
 }

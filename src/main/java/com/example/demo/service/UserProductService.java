@@ -1,6 +1,7 @@
 package com.example.demo.service;
 
 import com.example.demo.dto.UserProductDTO;
+import com.example.demo.dto.UserTierLimitDTO;
 import com.example.demo.entity.Product;
 import com.example.demo.entity.User;
 import com.example.demo.entity.UserProduct;
@@ -114,6 +115,58 @@ public class UserProductService {
         .productId(userProduct.getProduct().getId())
         .status(userProduct.getStatus())
         .createdAt(userProduct.getCreatedAt())
+        .build();
+  }
+
+  /**
+   * Get the current user's highest active tier and credit limit information. Returns null if the
+   * user has no active product subscription.
+   *
+   * @param userId the user ID
+   * @return UserTierLimitDTO with tier and limit info, or null if no active product
+   */
+  @Transactional(readOnly = true)
+  public UserTierLimitDTO getCurrentUserTierAndLimits(Long userId) {
+    // Find user's active products ordered by tier (highest first)
+    List<UserProduct> activeProducts =
+        userProductRepository.findActiveUserProductsByUserIdOrderByTier(userId);
+
+    if (activeProducts.isEmpty()) {
+      return null; // No active product subscription
+    }
+
+    // Get the highest tier product (first in list since ordered DESC by tierOrder)
+    UserProduct userProduct = activeProducts.get(0);
+    Product product = userProduct.getProduct();
+
+    // Calculate derived fields
+    Double currentUsed =
+        userProduct.getCurrentUsedAmount() != null ? userProduct.getCurrentUsedAmount() : 0.0;
+    Double creditLimit =
+        product.getCreditLimit() != null ? product.getCreditLimit() : product.getMaxAmount();
+    Double availableCredit = creditLimit - currentUsed;
+
+    Double totalPaid =
+        userProduct.getTotalPaidAmount() != null ? userProduct.getTotalPaidAmount() : 0.0;
+    Double upgradeThreshold = product.getUpgradeThreshold();
+    Double remainingToUpgrade = null;
+
+    if (upgradeThreshold != null) {
+      remainingToUpgrade = Math.max(0, upgradeThreshold - totalPaid);
+    }
+
+    return UserTierLimitDTO.builder()
+        .tierName(product.getName())
+        .tierCode(product.getCode())
+        .tierOrder(product.getTierOrder())
+        .creditLimit(creditLimit)
+        .currentUsedAmount(currentUsed)
+        .availableCredit(availableCredit)
+        .totalPaidAmount(totalPaid)
+        .upgradeThreshold(upgradeThreshold)
+        .remainingToUpgrade(remainingToUpgrade)
+        .interestRate(product.getInterestRate())
+        .status(userProduct.getStatus())
         .build();
   }
 }

@@ -144,6 +144,8 @@ public class DataInitializer implements CommandLineRunner {
         findOrCreateMenu("LOAN_APP_DELETE", "Delete Loan Application", "/api/loan-applications/*");
 
     // -------------------- LOAN HISTORY (ADMIN/STAFF) --------------------
+    Menu loanHistoryMy =
+        findOrCreateMenu("LOAN_HISTORY_MY", "My Loan History", "/api/loan-applications/my-history");
     Menu loanHistoryCreate =
         findOrCreateMenu("LOAN_HISTORY_CREATE", "Create Loan History", "/api/loan-history");
     Menu loanHistoryGet =
@@ -184,6 +186,9 @@ public class DataInitializer implements CommandLineRunner {
         findOrCreateMenu("USER_PRODUCT_UPDATE", "Update User Product", "/api/user-products/*");
     Menu userProductDelete =
         findOrCreateMenu("USER_PRODUCT_DELETE", "Delete User Product", "/api/user-products/*");
+    Menu userProductMyTier =
+        findOrCreateMenu(
+            "USER_PRODUCT_MY_TIER", "Get My Tier & Limits", "/api/user-products/my-tier");
 
     // -------------------- USER PROFILE --------------------
     Menu profileCreate =
@@ -251,6 +256,7 @@ public class DataInitializer implements CommandLineRunner {
     // ============================================================
 
     // -------------------- USER (CUSTOMER) ROLE --------------------
+    mapRoleToMenu(userRole, loanHistoryMy);
     mapRoleToMenu(userRole, loanSubmit);
     mapRoleToMenu(userRole, productList);
     mapRoleToMenu(userRole, productActive);
@@ -265,6 +271,7 @@ public class DataInitializer implements CommandLineRunner {
     mapRoleToMenu(userRole, notificationMarkRead);
     mapRoleToMenu(userRole, userProductByUser);
     mapRoleToMenu(userRole, userProductActiveByUser);
+    mapRoleToMenu(userRole, userProductMyTier);
 
     // -------------------- MARKETING ROLE --------------------
     mapRoleToMenu(marketingRole, loanQueueMarketing);
