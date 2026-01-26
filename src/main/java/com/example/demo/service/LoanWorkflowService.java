@@ -39,6 +39,7 @@ public class LoanWorkflowService {
   private final LoanEligibilityService loanEligibilityService;
   private final UserProfileService userProfileService;
   private final EmailService emailService;
+  private final LoanNotificationService loanNotificationService;
 
   @Transactional
   public LoanApplicationDTO submitLoan(LoanSubmitRequest request, Long userId) {
@@ -181,6 +182,11 @@ public class LoanWorkflowService {
     if (!currentStatus.equals(nextStatus)) {
       loanApplication.setCurrentStatus(nextStatus);
       loanApplicationRepository.save(loanApplication);
+
+      // If loan is rejected, recalculate the user's used amount to release the limit
+      if (LoanStatus.REJECTED.name().equals(nextStatus)) {
+        loanEligibilityService.recalculateUsedAmount(loanApplication.getUser().getId());
+      }
     }
 
     // Create history entry
@@ -377,115 +383,13 @@ public class LoanWorkflowService {
     loanHistoryRepository.save(history);
   }
 
+  /**
+   * Send notifications for loan status changes. Delegates to LoanNotificationService following
+   * Single Responsibility Principle.
+   */
   private void sendNotifications(
       LoanApplication loanApplication, String fromStatus, String toStatus) {
-    try {
-      // SUBMITTED -> IN_REVIEW: Notify customer
-      if ("SUBMITTED".equals(fromStatus) && "IN_REVIEW".equals(toStatus)) {
-        notificationService.createNotification(
-            com.example.demo.dto.NotificationDTO.builder()
-                .userId(loanApplication.getUser().getId())
-                .relatedLoanApplicationId(loanApplication.getLoanApplicationId())
-                .notifType("IN_REVIEW")
-                .channel("IN_APP")
-                .message("Your loan application is being reviewed")
-                .build());
-      }
-
-      // IN_REVIEW -> WAITING_APPROVAL: Notify branch managers
-      if ("IN_REVIEW".equals(fromStatus) && "WAITING_APPROVAL".equals(toStatus)) {
-        List<User> branchManagers = userRepository.findByRoles_Name("BRANCH_MANAGER");
-        for (User manager : branchManagers) {
-          notificationService.createNotification(
-              com.example.demo.dto.NotificationDTO.builder()
-                  .userId(manager.getId())
-                  .relatedLoanApplicationId(loanApplication.getLoanApplicationId())
-                  .notifType("APPROVAL_REQUIRED")
-                  .channel("IN_APP")
-                  .message("New loan application awaiting your approval")
-                  .build());
-        }
-      }
-
-      // WAITING_APPROVAL -> APPROVED_WAITING_DISBURSEMENT: Notify customer + back
-      // office
-      if ("WAITING_APPROVAL".equals(fromStatus)
-          && "APPROVED_WAITING_DISBURSEMENT".equals(toStatus)) {
-        // Notify customer
-        notificationService.createNotification(
-            com.example.demo.dto.NotificationDTO.builder()
-                .userId(loanApplication.getUser().getId())
-                .relatedLoanApplicationId(loanApplication.getLoanApplicationId())
-                .notifType("APPROVED")
-                .channel("IN_APP")
-                .message("Your loan application has been approved")
-                .build());
-
-        // Notify back office users
-        List<User> backOfficeUsers = userRepository.findByRoles_Name("BACK_OFFICE");
-        for (User backOffice : backOfficeUsers) {
-          notificationService.createNotification(
-              com.example.demo.dto.NotificationDTO.builder()
-                  .userId(backOffice.getId())
-                  .relatedLoanApplicationId(loanApplication.getLoanApplicationId())
-                  .notifType("DISBURSEMENT_REQUIRED")
-                  .channel("IN_APP")
-                  .message("Approved loan awaiting disbursement")
-                  .build());
-        }
-      }
-
-      // WAITING_APPROVAL -> REJECTED: Notify customer
-      if ("WAITING_APPROVAL".equals(fromStatus) && "REJECTED".equals(toStatus)) {
-        notificationService.createNotification(
-            com.example.demo.dto.NotificationDTO.builder()
-                .userId(loanApplication.getUser().getId())
-                .relatedLoanApplicationId(loanApplication.getLoanApplicationId())
-                .notifType("REJECTED")
-                .channel("IN_APP")
-                .message("Your loan application has been rejected")
-                .build());
-      }
-
-      // APPROVED_WAITING_DISBURSEMENT -> DISBURSED: Notify customer
-      if ("APPROVED_WAITING_DISBURSEMENT".equals(fromStatus) && "DISBURSED".equals(toStatus)) {
-        // Create in-app notification
-        notificationService.createNotification(
-            com.example.demo.dto.NotificationDTO.builder()
-                .userId(loanApplication.getUser().getId())
-                .relatedLoanApplicationId(loanApplication.getLoanApplicationId())
-                .notifType("DISBURSED")
-                .channel("IN_APP")
-                .message("Your loan has been disbursed")
-                .build());
-
-        // Send email notification
-        try {
-          User user = loanApplication.getUser();
-          emailService.sendLoanDisbursementEmail(
-              user.getEmail(),
-              user.getUsername(),
-              loanApplication.getLoanApplicationId(),
-              loanApplication.getAmount());
-          log.info(
-              "Disbursement email sent to {} for loan {}",
-              user.getEmail(),
-              loanApplication.getLoanApplicationId());
-        } catch (Exception emailError) {
-          // Log error but don't fail the workflow
-          log.error(
-              "Failed to send disbursement email for loan {}: {}",
-              loanApplication.getLoanApplicationId(),
-              emailError.getMessage());
-        }
-      }
-    } catch (Exception e) {
-      log.error(
-          "Error sending notifications for loan {}: {}",
-          loanApplication.getLoanApplicationId(),
-          e.getMessage());
-      // Don't fail the transaction if notification fails
-    }
+    loanNotificationService.notifyLoanStatusChange(loanApplication, fromStatus, toStatus);
   }
 
   public List<String> getAllowedActions(String currentStatus, Long userId) {

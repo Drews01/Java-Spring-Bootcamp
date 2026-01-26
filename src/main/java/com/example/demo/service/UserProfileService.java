@@ -28,6 +28,7 @@ public class UserProfileService {
   private final UserProfileRepository userProfileRepository;
   private final UserRepository userRepository;
   private final FileValidationService fileValidationService;
+  private final LoanEligibilityService loanEligibilityService;
 
   @Transactional
   public UserProfileDTO createUserProfile(Long userId, UserProfileDTO dto) {
@@ -48,6 +49,12 @@ public class UserProfileService {
             .build();
 
     UserProfile saved = userProfileRepository.save(userProfile);
+
+    // Auto-assign Bronze tier if profile is complete
+    if (isProfileComplete(userId)) {
+      loanEligibilityService.assignDefaultProduct(userId);
+    }
+
     return convertToDTO(saved);
   }
 
@@ -88,6 +95,12 @@ public class UserProfileService {
     userProfile.setBankName(dto.getBankName());
 
     UserProfile updated = userProfileRepository.save(userProfile);
+
+    // Auto-assign Bronze tier if profile becomes complete after update
+    if (isProfileComplete(userId)) {
+      loanEligibilityService.assignDefaultProduct(userId);
+    }
+
     return convertToDTO(updated);
   }
 

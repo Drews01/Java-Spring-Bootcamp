@@ -28,8 +28,8 @@ public class DynamicAuthorizationManager
   private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
   @Override
-  public AuthorizationDecision authorize(
-      Supplier<? extends Authentication> authentication, RequestAuthorizationContext context) {
+  public AuthorizationDecision check(
+      Supplier<Authentication> authentication, RequestAuthorizationContext context) {
     Authentication auth = authentication.get();
     if (auth == null || !auth.isAuthenticated()) {
       return new AuthorizationDecision(false);

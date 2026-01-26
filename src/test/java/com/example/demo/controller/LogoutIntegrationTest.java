@@ -49,7 +49,7 @@ public class LogoutIntegrationTest {
         .andExpect(status().isCreated());
 
     // 2. Login to get token
-    AuthRequest loginRequest = new AuthRequest("testuser", "password");
+    AuthRequest loginRequest = new AuthRequest("testuser", "password", null, null, null);
     String responseContent =
         mockMvc
             .perform(

@@ -49,7 +49,7 @@ public class LoginTest {
 
   @Test
   public void testLoginSuccess() throws Exception {
-    AuthRequest loginRequest = new AuthRequest("testuser", "password123");
+    AuthRequest loginRequest = new AuthRequest("testuser", "password123", null, null, null);
 
     mockMvc
         .perform(
@@ -62,7 +62,7 @@ public class LoginTest {
 
   @Test
   public void testLoginFailure_WrongPassword() throws Exception {
-    AuthRequest loginRequest = new AuthRequest("testuser", "wrongpassword");
+    AuthRequest loginRequest = new AuthRequest("testuser", "wrongpassword", null, null, null);
 
     // Expect 401 Unauthorized or 403 Forbidden depending on implementation
     // Commonly 401 or 403. Let's assume generic error status for now, usually 401.

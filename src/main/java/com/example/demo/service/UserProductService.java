@@ -21,6 +21,7 @@ public class UserProductService {
   private final UserProductRepository userProductRepository;
   private final UserRepository userRepository;
   private final ProductRepository productRepository;
+  private final LoanEligibilityService loanEligibilityService;
 
   @Transactional
   public UserProductDTO createUserProduct(UserProductDTO dto) {
@@ -125,8 +126,11 @@ public class UserProductService {
    * @param userId the user ID
    * @return UserTierLimitDTO with tier and limit info, or null if no active product
    */
-  @Transactional(readOnly = true)
+  @Transactional
   public UserTierLimitDTO getCurrentUserTierAndLimits(Long userId) {
+    // Self-healing: Recalculate used amount
+    loanEligibilityService.recalculateUsedAmount(userId);
+
     // Find user's active products ordered by tier (highest first)
     List<UserProduct> activeProducts =
         userProductRepository.findActiveUserProductsByUserIdOrderByTier(userId);

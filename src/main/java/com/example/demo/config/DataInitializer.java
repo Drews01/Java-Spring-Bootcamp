@@ -251,6 +251,13 @@ public class DataInitializer implements CommandLineRunner {
         findOrCreateMenu("STAFF_DASHBOARD", "Staff Dashboard", "/api/staff/dashboard");
     Menu staffQueue = findOrCreateMenu("STAFF_QUEUE", "Staff Queue", "/api/staff/queue");
 
+    // -------------------- FCM (PUSH NOTIFICATION) --------------------
+    Menu fcmRegister = findOrCreateMenu("FCM_REGISTER", "Register FCM Token", "/api/fcm/register");
+    Menu fcmUnregister =
+        findOrCreateMenu("FCM_UNREGISTER", "Unregister FCM Token", "/api/fcm/unregister");
+    Menu fcmSend = findOrCreateMenu("FCM_SEND", "Send Push Notification", "/api/fcm/send");
+    Menu fcmTest = findOrCreateMenu("FCM_TEST", "Test Push Notification", "/api/fcm/test");
+
     // ============================================================
     // ROLE-MENU MAPPINGS
     // ============================================================
@@ -347,6 +354,12 @@ public class DataInitializer implements CommandLineRunner {
     mapRoleToMenu(adminRole, rbacRolesList);
     mapRoleToMenu(adminRole, rbacRoleAccess);
     mapRoleToMenu(adminRole, rbacCategories);
+
+    // FCM (Push Notification) - Admin has full access
+    mapRoleToMenu(adminRole, fcmRegister);
+    mapRoleToMenu(adminRole, fcmUnregister);
+    mapRoleToMenu(adminRole, fcmSend);
+    mapRoleToMenu(adminRole, fcmTest);
 
     // Loan Application Management
     mapRoleToMenu(adminRole, loanAppCreate);

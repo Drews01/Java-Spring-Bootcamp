@@ -13,6 +13,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -23,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 /** Authentication Service Handles user registration and login logic */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthService {
 
   private final UserRepository userRepository;
@@ -34,6 +36,7 @@ public class AuthService {
   private final TokenBlacklistService tokenBlacklistService;
   private final PasswordResetService passwordResetService;
   private final EmailService emailService;
+  private final FCMService fcmService;
 
   /** Register a new user */
   @Transactional
@@ -88,6 +91,13 @@ public class AuthService {
   /** Login user */
   public AuthResponse login(AuthRequest request) {
     // Authenticate user
+    log.info("Login attempt for: {}", request.usernameOrEmail());
+    if (request.fcmToken() != null) {
+      log.info("Received FCM Token length: {}", request.fcmToken().length());
+    } else {
+      log.warn("No FCM Token received in login request");
+    }
+
     Authentication authentication =
         authenticationManager.authenticate(
             new UsernamePasswordAuthenticationToken(request.usernameOrEmail(), request.password()));
@@ -101,6 +111,12 @@ public class AuthService {
     // Store refresh token
     refreshTokenService.createRefreshToken(
         userDetails.getUser().getId(), jwtService.getRefreshExpirationSeconds());
+
+    // Save FCM device token if provided (for push notifications)
+    if (request.fcmToken() != null && !request.fcmToken().isBlank()) {
+      fcmService.saveDeviceToken(
+          userDetails.getUser(), request.fcmToken(), request.deviceName(), request.platform());
+    }
 
     return buildAuthResponse(token, refreshToken, userDetails.getUser());
   }

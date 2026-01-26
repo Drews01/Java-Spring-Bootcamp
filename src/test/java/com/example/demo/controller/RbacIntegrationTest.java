@@ -70,7 +70,7 @@ public class RbacIntegrationTest {
   }
 
   private String getLoginToken(String username, String password) throws Exception {
-    AuthRequest loginRequest = new AuthRequest(username, password);
+    AuthRequest loginRequest = new AuthRequest(username, password, null, null, null);
     String responseContent =
         mockMvc
             .perform(

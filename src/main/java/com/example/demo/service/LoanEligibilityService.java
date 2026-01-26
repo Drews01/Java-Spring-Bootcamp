@@ -53,12 +53,12 @@ public class LoanEligibilityService {
       return 0.0;
     }
 
-    Double totalUnpaid = loanApplicationRepository.findTotalUnpaidAmountByUserId(userId);
-    if (totalUnpaid == null) {
-      totalUnpaid = 0.0;
+    Double totalUsed = loanApplicationRepository.findTotalActiveLoanAmount(userId);
+    if (totalUsed == null) {
+      totalUsed = 0.0;
     }
 
-    return Math.max(0, currentProduct.getCreditLimit() - totalUnpaid);
+    return Math.max(0, currentProduct.getCreditLimit() - totalUsed);
   }
 
   /**
@@ -231,6 +231,26 @@ public class LoanEligibilityService {
             currentProduct.getName(),
             nextProduct.get().getName());
       }
+    }
+  }
+
+  /**
+   * Recalculate and update user's used amount based on all active (non-rejected/non-paid) loans.
+   * This is used to ensure the credit limit is correctly restored after a loan rejection.
+   *
+   * @param userId the user ID
+   */
+  @Transactional
+  public void recalculateUsedAmount(Long userId) {
+    Double totalActive = loanApplicationRepository.findTotalActiveLoanAmount(userId);
+
+    List<UserProduct> userProducts =
+        userProductRepository.findActiveUserProductsByUserIdOrderByTier(userId);
+    if (!userProducts.isEmpty()) {
+      UserProduct userProduct = userProducts.get(0);
+      userProduct.setCurrentUsedAmount(totalActive);
+      userProductRepository.save(userProduct);
+      log.info("Recalculated used amount for user {}: {}", userId, totalActive);
     }
   }
 
