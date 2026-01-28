@@ -3,17 +3,24 @@ package com.example.demo.service;
 import com.example.demo.dto.AuthRequest;
 import com.example.demo.dto.AuthResponse;
 import com.example.demo.dto.RegisterRequest;
+import com.example.demo.entity.AuthProvider;
 import com.example.demo.entity.Role;
 import com.example.demo.entity.User;
 import com.example.demo.repository.RoleRepository;
 import com.example.demo.repository.UserRepository;
 import com.example.demo.security.CustomUserDetails;
 import com.example.demo.security.JwtService;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -38,6 +45,9 @@ public class AuthService {
   private final EmailService emailService;
   private final FCMService fcmService;
 
+  @Value("${app.google.client-id}")
+  private String googleClientId;
+
   /** Register a new user */
   @Transactional
   public AuthResponse register(RegisterRequest request) {
@@ -52,27 +62,25 @@ public class AuthService {
     }
 
     // Get or create USER role
-    Role userRole =
-        roleRepository
-            .findByName("USER")
-            .orElseGet(
-                () -> {
-                  Role newRole = Role.builder().name("USER").build();
-                  return roleRepository.save(newRole);
-                });
+    Role userRole = roleRepository
+        .findByName("USER")
+        .orElseGet(
+            () -> {
+              Role newRole = Role.builder().name("USER").build();
+              return roleRepository.save(newRole);
+            });
 
     // Create new user
     Set<Role> roles = new HashSet<>();
     roles.add(userRole);
 
-    User user =
-        User.builder()
-            .username(request.username())
-            .email(request.email())
-            .password(passwordEncoder.encode(request.password()))
-            .isActive(true)
-            .roles(roles)
-            .build();
+    User user = User.builder()
+        .username(request.username())
+        .email(request.email())
+        .password(passwordEncoder.encode(request.password()))
+        .isActive(true)
+        .roles(roles)
+        .build();
 
     User savedUser = userRepository.save(user);
 
@@ -98,9 +106,8 @@ public class AuthService {
       log.warn("No FCM Token received in login request");
     }
 
-    Authentication authentication =
-        authenticationManager.authenticate(
-            new UsernamePasswordAuthenticationToken(request.usernameOrEmail(), request.password()));
+    Authentication authentication = authenticationManager.authenticate(
+        new UsernamePasswordAuthenticationToken(request.usernameOrEmail(), request.password()));
 
     CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal(); // fixed cast
 
@@ -121,21 +128,96 @@ public class AuthService {
     return buildAuthResponse(token, refreshToken, userDetails.getUser());
   }
 
+  /** Login user with Google ID Token */
+  @Transactional
+  public AuthResponse loginWithGoogle(String idTokenString) {
+    try {
+      GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), new GsonFactory())
+          .setAudience(Collections.singletonList(googleClientId))
+          .build();
+
+      GoogleIdToken idToken = verifier.verify(idTokenString);
+      if (idToken == null) {
+        throw new IllegalArgumentException("Invalid Google ID Token");
+      }
+
+      GoogleIdToken.Payload payload = idToken.getPayload();
+      String email = payload.getEmail();
+      String name = (String) payload.get("name");
+
+      if (email == null) {
+        throw new IllegalArgumentException("Email not found in ID Token");
+      }
+
+      // Check if user exists
+      User user = userRepository
+          .findByEmail(email)
+          .orElseGet(
+              () -> {
+                // Create new user
+                return createGoogleUser(email, name);
+              });
+
+      // Update auth provider if currently LOCAL (Account Linking) or ensure it's set
+      if (user.getAuthProvider() == null) {
+        user.setAuthProvider(AuthProvider.GOOGLE);
+        userRepository.save(user);
+      }
+
+      // Generate tokens
+      CustomUserDetails userDetails = new CustomUserDetails(user);
+      String token = jwtService.generateToken(userDetails);
+      String refreshToken = jwtService.generateRefreshToken(userDetails);
+
+      // Store refresh token
+      refreshTokenService.createRefreshToken(
+          user.getId(), jwtService.getRefreshExpirationSeconds());
+
+      return buildAuthResponse(token, refreshToken, user);
+
+    } catch (Exception e) {
+      log.error("Google Login Failed", e);
+      throw new IllegalArgumentException("Google Login Failed: " + e.getMessage());
+    }
+  }
+
+  private User createGoogleUser(String email, String name) {
+    Role userRole = roleRepository
+        .findByName("USER")
+        .orElseGet(
+            () -> {
+              Role newRole = Role.builder().name("USER").build();
+              return roleRepository.save(newRole);
+            });
+
+    Set<Role> roles = new HashSet<>();
+    roles.add(userRole);
+
+    User user = User.builder()
+        .username(email) // Use email as username for Google users
+        .email(email)
+        .password(null) // No password
+        .authProvider(AuthProvider.GOOGLE)
+        .isActive(true)
+        .roles(roles)
+        .build();
+
+    return userRepository.save(user);
+  }
+
   /** Refresh access token */
   public AuthResponse refreshAccessToken(String refreshToken) {
     // 1. Validate refresh token in Redis
-    Long userId =
-        refreshTokenService
-            .validateRefreshToken(refreshToken)
-            .orElseThrow(() -> new IllegalArgumentException("Invalid or expired refresh token"));
+    Long userId = refreshTokenService
+        .validateRefreshToken(refreshToken)
+        .orElseThrow(() -> new IllegalArgumentException("Invalid or expired refresh token"));
 
     // 2. Validate JWT signature and expiration
     // We create a dummy/temp user details just for validation or fetch user?
     // Better to fetch user to ensure they still exist and are active
-    User user =
-        userRepository
-            .findById(userId)
-            .orElseThrow(() -> new IllegalArgumentException("User not found"));
+    User user = userRepository
+        .findById(userId)
+        .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
     if (!Boolean.TRUE.equals(user.getIsActive())) {
       throw new IllegalArgumentException("User is inactive");
@@ -183,10 +265,9 @@ public class AuthService {
   /** Initiate password reset */
   @Transactional
   public void forgotPassword(String email) {
-    User user =
-        userRepository
-            .findByEmail(email)
-            .orElseThrow(() -> new IllegalArgumentException("User not found with email: " + email));
+    User user = userRepository
+        .findByEmail(email)
+        .orElseThrow(() -> new IllegalArgumentException("User not found with email: " + email));
 
     // Create reset token (valid for 1 hour) in Redis
     String token = passwordResetService.createPasswordResetToken(user.getId(), 1);
@@ -199,16 +280,14 @@ public class AuthService {
   /** Reset password */
   @Transactional
   public void resetPassword(String token, String newPassword) {
-    Long userId =
-        passwordResetService
-            .validateToken(token)
-            .orElseThrow(
-                () -> new IllegalArgumentException("Invalid or expired password reset token"));
+    Long userId = passwordResetService
+        .validateToken(token)
+        .orElseThrow(
+            () -> new IllegalArgumentException("Invalid or expired password reset token"));
 
-    User user =
-        userRepository
-            .findById(userId)
-            .orElseThrow(() -> new IllegalArgumentException("User not found"));
+    User user = userRepository
+        .findById(userId)
+        .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
     // Update password
     user.setPassword(passwordEncoder.encode(newPassword));
