@@ -102,6 +102,11 @@ Now Nginx is listening on port 80.
 ```bash
 cd /opt/app/deploy
 docker compose pull
+
+nano firebase-accont.json
+
+echo "ghp_1234567890abcdef..." | docker login ghcr.io -u Drews01 --password-stdin
+
 docker compose up -d
 ```
 Your backend is now running effectively at `http://localhost:8080`, but Nginx exposes it at `http://YOUR_IP/backend/`.
@@ -142,14 +147,15 @@ Certbot will **automatically edit** your Nginx config to add SSL lines and redir
 | `docker compose up -d` | Start all containers |
 | `docker compose pull && docker compose up -d` | Update to latest image |
 
+
+# Stop all running containers
+docker stop $(docker ps -q)
+# Remove all containers
+docker rm $(docker ps -aq)
 ---
 
-## 🔧 Troubleshooting
-
-### App not starting?
-```bash
 # Check app logs
-docker compose logs app
+docker compose logs app | grep -i error
 
 # Common issues:
 # - DB_PASSWORD too weak (needs uppercase, lowercase, number, special char)
@@ -165,6 +171,7 @@ docker compose ps sqlserver
 # View SQL Server logs
 docker compose logs sqlserver
 ```
+
 
 ### Reset everything:
 ```bash

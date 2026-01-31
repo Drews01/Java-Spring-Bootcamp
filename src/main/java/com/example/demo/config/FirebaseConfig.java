@@ -4,7 +4,6 @@ import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
 import com.google.firebase.messaging.FirebaseMessaging;
-import jakarta.annotation.PostConstruct;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -27,15 +26,24 @@ public class FirebaseConfig {
   // Filesystem path for Docker volume mount
   private static final String DOCKER_MOUNT_PATH = "/app/firebase-service-account.json";
 
-  @PostConstruct
-  public void initialize() {
+  /**
+   * Initialize Firebase and return FirebaseMessaging bean. This method combines initialization and
+   * bean creation to avoid timing issues between @PostConstruct and @Bean.
+   */
+  @Bean
+  @ConditionalOnMissingBean(FirebaseMessaging.class)
+  public FirebaseMessaging firebaseMessaging() {
     try {
+      // Initialize Firebase if not already done
       if (FirebaseApp.getApps().isEmpty()) {
         InputStream serviceAccount = getFirebaseConfigStream();
 
         if (serviceAccount == null) {
-          log.warn("Firebase config file not found. Push notifications will be disabled.");
-          return;
+          log.warn(
+              "Firebase service account file not found at {} or classpath. "
+                  + "Push notifications will be disabled.",
+              DOCKER_MOUNT_PATH);
+          return null;
         }
 
         FirebaseOptions options =
@@ -48,14 +56,17 @@ public class FirebaseConfig {
       } else {
         log.info("Firebase application already initialized");
       }
+
+      return FirebaseMessaging.getInstance();
     } catch (IOException e) {
       log.warn(
-          "Firebase config file not found. Push notifications will be disabled. Error: {}",
+          "Firebase config file not found or invalid. Push notifications will be disabled. "
+              + "Error: {}",
           e.getMessage());
-      // Do not throw exception, allow app to start without Firebase
+      return null;
     } catch (Exception e) {
       log.error("Failed to initialize Firebase: {}", e.getMessage());
-      // Keep running even if Firebase fails
+      return null;
     }
   }
 
@@ -73,6 +84,12 @@ public class FirebaseConfig {
       } catch (IOException e) {
         log.warn("Failed to read Docker mount file: {}", e.getMessage());
       }
+    } else {
+      log.info(
+          "Firebase config not found at Docker mount path: {} (exists={}, canRead={})",
+          DOCKER_MOUNT_PATH,
+          dockerMountFile.exists(),
+          dockerMountFile.canRead());
     }
 
     // Fall back to classpath (for local development / CI builds)
@@ -81,20 +98,13 @@ public class FirebaseConfig {
       if (resource.exists()) {
         log.info("Loading Firebase config from classpath: {}", serviceAccountPath);
         return resource.getInputStream();
+      } else {
+        log.info("Firebase config not found in classpath: {}", serviceAccountPath);
       }
     } catch (IOException e) {
       log.warn("Failed to read classpath resource: {}", e.getMessage());
     }
 
     return null;
-  }
-
-  @Bean
-  @ConditionalOnMissingBean(FirebaseMessaging.class)
-  public FirebaseMessaging firebaseMessaging() {
-    if (FirebaseApp.getApps().isEmpty()) {
-      return null;
-    }
-    return FirebaseMessaging.getInstance();
   }
 }
