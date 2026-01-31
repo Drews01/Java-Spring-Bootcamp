@@ -59,6 +59,9 @@ services:
       - "1433:1433"
     volumes:
       - sqlserver_data:/var/opt/mssql
+      - ./init-db.sql:/usr/src/app/init-db.sql
+      - ./entrypoint.sh:/usr/src/app/entrypoint.sh
+    entrypoint: [ "/bin/bash", "/usr/src/app/entrypoint.sh" ]
     healthcheck:
       test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$$MSSQL_SA_PASSWORD" -C -Q "SELECT 1" || exit 1
       interval: 10s
