@@ -4,6 +4,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.demo.config.TestConfig;
 import com.example.demo.dto.AuthRequest;
 import com.example.demo.entity.Role;
 import com.example.demo.entity.User;
@@ -25,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
+@org.springframework.context.annotation.Import(TestConfig.class)
 public class RbacIntegrationTest {
 
   @Autowired private MockMvc mockMvc;

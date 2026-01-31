@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.demo.config.TestConfig;
 import com.example.demo.dto.LoanApplicationDTO;
 import com.example.demo.dto.LoanSubmitRequest;
 import com.example.demo.entity.Branch;
@@ -23,7 +24,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.transaction.annotation.Transactional;
 
+@SpringBootTest
+@Transactional
+@Import(TestConfig.class)
 @ExtendWith(MockitoExtension.class)
 public class LoanWorkflowServiceLocationTest {
 
