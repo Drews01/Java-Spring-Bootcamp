@@ -10,7 +10,7 @@ Complete guide to deploy the Loan Application to your GCP VPS.
 
 ---
 
-## 1️⃣ Initial VPS Setup (One-time)
+## 1️⃣ Initial VPS Setup
 
 SSH into your VPS and run:
 
@@ -25,14 +25,13 @@ sudo usermod -aG docker $USER
 # Install Docker Compose v2
 sudo apt install docker-compose-plugin -y
 
-# Logout and login again for group changes
-exit
-```
+# Install Native Nginx
+sudo apt install nginx -y
+sudo systemctl enable nginx
+sudo systemctl start nginx
 
-After re-logging in, verify:
-```bash
-docker --version
-docker compose version
+# Logout and login again for filter changes
+exit
 ```
 
 ---
@@ -42,14 +41,13 @@ docker compose version
 ```bash
 # Allow HTTP, HTTPS, and SSH
 sudo ufw allow 22/tcp
-sudo ufw allow 80/tcp
-sudo ufw allow 443/tcp
+sudo ufw allow 'Nginx Full'
 sudo ufw enable
 ```
 
 ---
 
-## 3️⃣ Clone & Configure
+## 3️⃣ Clone & Configure Backend
 
 ```bash
 # Clone repository
@@ -68,78 +66,68 @@ cp .env.example .env
 nano .env
 ```
 
-### Required `.env` values:
-| Variable | Description |
-|----------|-------------|
-| `DOCKER_IMAGE` | `ghcr.io/your-username/loan-app:latest` |
-| `DB_PASSWORD` | Strong password (min 8 chars, mixed case, number, special) |
-| `JWT_SECRET` | Run: `openssl rand -base64 64` |
-| `MAIL_USERNAME` | Your email |
-| `MAIL_PASSWORD` | App password (not regular password) |
+### Required `.env` values (Same as before)
+Set `DOCKER_IMAGE`, `DB_PASSWORD`, `JWT_SECRET`, etc.
 
 ---
 
-## 4️⃣ Firebase Setup (For Push Notifications)
+## 4️⃣ Configure Nginx (Global Router)
 
 ```bash
-# Copy your Firebase service account JSON to deploy folder
-# Name it: firebase-service-account.json
-nano firebase-service-account.json
-# Paste your Firebase Admin SDK JSON
+# Remove default config
+sudo rm /etc/nginx/sites-enabled/default
+
+# Copy our config
+sudo cp vps-nginx.conf /etc/nginx/sites-available/app_config
+
+# Enable it
+sudo ln -s /etc/nginx/sites-available/app_config /etc/nginx/sites-enabled/
+
+# Test config
+sudo nginx -t
+
+# Reload Nginx
+sudo systemctl reload nginx
 ```
 
----
-
-## 5️⃣ GitHub Container Registry Login
-
-```bash
-# Login to GHCR (use GitHub Personal Access Token with packages:read scope)
-echo "YOUR_GITHUB_PAT" | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password-stdin
-```
+Now Nginx is listening on port 80.
+- Requests to `/backend/*` -> go to Docker (localhost:8080)
+- Requests to `/` -> go to `/var/www/frontend` (see below)
 
 ---
 
-## 6️⃣ Start the Application
+## 5️⃣ Deployment: Frontend (Static) & Backend (Docker)
 
+### Backend (Docker)
 ```bash
-# Pull images and start
+cd /opt/app/deploy
 docker compose pull
 docker compose up -d
+```
+Your backend is now running effectively at `http://localhost:8080`, but Nginx exposes it at `http://YOUR_IP/backend/`.
 
-# Check status
-docker compose ps
+### Frontend (Static Files)
+If you have a frontend build (React/Vue/etc):
+```bash
+sudo mkdir -p /var/www/frontend
+sudo chown -R $USER:$USER /var/www/frontend
 
-# View logs
-docker compose logs -f app
+# Copy your build files (index.html, css, js) here
+# scp -r build/* user@vps-ip:/var/www/frontend/
 ```
 
 ---
 
-## 7️⃣ SSL Setup (Optional but Recommended)
+## 6️⃣ SSL Setup (Native Nginx - Easy Mode!)
 
-### Using Certbot:
 ```bash
-# Install certbot
-sudo apt install certbot -y
+# Install Certbot for Nginx
+sudo apt install certbot python3-certbot-nginx -y
 
-# Stop nginx temporarily
-docker compose stop nginx
-
-# Get certificate
-sudo certbot certonly --standalone -d yourdomain.com
-
-# Copy certs
-sudo mkdir -p ssl
-sudo cp /etc/letsencrypt/live/yourdomain.com/fullchain.pem ssl/
-sudo cp /etc/letsencrypt/live/yourdomain.com/privkey.pem ssl/
-sudo chown $USER:$USER ssl/*
-
-# Edit nginx.conf to enable SSL (uncomment SSL lines)
-nano nginx.conf
-
-# Restart nginx
-docker compose up -d nginx
+# Run Certbot (Follow the prompts)
+sudo certbot --nginx -d yourdomain.com
 ```
+Certbot will **automatically edit** your Nginx config to add SSL lines and redirect HTTP to HTTPS. No manual config needed!
 
 ---
 
