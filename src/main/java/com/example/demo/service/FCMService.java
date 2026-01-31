@@ -14,8 +14,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,13 +24,22 @@ import org.springframework.transaction.annotation.Transactional;
  * notification delivery.
  */
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class FCMService {
 
   private final FirebaseMessaging firebaseMessaging;
   private final UserDeviceRepository userDeviceRepository;
   private final UserRepository userRepository;
+
+  @Autowired
+  public FCMService(
+      @Autowired(required = false) FirebaseMessaging firebaseMessaging,
+      UserDeviceRepository userDeviceRepository,
+      UserRepository userRepository) {
+    this.firebaseMessaging = firebaseMessaging;
+    this.userDeviceRepository = userDeviceRepository;
+    this.userRepository = userRepository;
+  }
 
   /**
    * Save or update FCM device token for a user.
