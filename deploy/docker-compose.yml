@@ -14,6 +14,9 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:sqlserver://sqlserver:1433;databaseName=${DB_NAME:-LoanDB};encrypt=true;trustServerCertificate=true
       - SPRING_DATASOURCE_USERNAME=${DB_USER:-sa}
       - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      # JPA/Hibernate
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_SHOW_SQL=false
       # Redis
       - SPRING_DATA_REDIS_HOST=redis
       - SPRING_DATA_REDIS_PORT=6379
