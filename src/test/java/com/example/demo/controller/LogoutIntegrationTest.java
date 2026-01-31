@@ -1,12 +1,12 @@
 package com.example.demo.controller;
 
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.demo.dto.AuthRequest;
 import com.example.demo.dto.RegisterRequest;
-import com.example.demo.repository.RoleRepository;
 import com.example.demo.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,9 +16,11 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@Transactional
 public class LogoutIntegrationTest {
 
   @Autowired private MockMvc mockMvc;
@@ -27,20 +29,17 @@ public class LogoutIntegrationTest {
 
   @Autowired private UserRepository userRepository;
 
-  @Autowired private RoleRepository roleRepository;
-
   @BeforeEach
   public void setup() {
-    userRepository.deleteAll();
-    // Roles initialized in ApplicationRunner or data.sql, but we can ensure user
-    // exists
+    // Clean up test user if exists from previous runs
+    userRepository.findByUsername("logouttest").ifPresent(userRepository::delete);
   }
 
   @Test
   public void testLogoutFlow() throws Exception {
     // 1. Register a user
     RegisterRequest registerRequest =
-        new RegisterRequest("testuser", "test@example.com", "password");
+        new RegisterRequest("logouttest", "logouttest@example.com", "password");
     mockMvc
         .perform(
             post("/auth/register")
@@ -49,7 +48,7 @@ public class LogoutIntegrationTest {
         .andExpect(status().isCreated());
 
     // 2. Login to get token
-    AuthRequest loginRequest = new AuthRequest("testuser", "password", null, null, null);
+    AuthRequest loginRequest = new AuthRequest("logouttest", "password", null, null, null);
     String responseContent =
         mockMvc
             .perform(
@@ -62,25 +61,18 @@ public class LogoutIntegrationTest {
             .getResponse()
             .getContentAsString();
 
-    String token = new ObjectMapper().readTree(responseContent).path("data").path("token").asText();
+    String token = objectMapper.readTree(responseContent).path("data").path("token").asText();
 
-    // 3. Access a protected endpoint (e.g., getting user profile if available, or
-    // just ANY protected endpoint)
-    // Since we don't have a simple GET endpoint handy in the prompt, let's assume
-    // one or try to access something we know is protected.
-    // Actually, we can just try to access a non-existent endpoint that is
-    // protected, 404 is still authenticated.
-    // Better: let's try calling /auth/logout (it accepts the token) -> 200 OK.
-
+    // 3. Logout with valid token (include CSRF token for POST request)
     mockMvc
-        .perform(post("/auth/logout").header("Authorization", "Bearer " + token))
+        .perform(post("/auth/logout").header("Authorization", "Bearer " + token).with(csrf()))
         .andExpect(status().isOk());
 
     // 4. Access protected endpoint AGAIN with SAME token -> Should be 401
     // Unauthorized
-    // We can use /auth/logout again, it's protected now!
+    // (token is now blacklisted)
     mockMvc
-        .perform(post("/auth/logout").header("Authorization", "Bearer " + token))
+        .perform(post("/auth/logout").header("Authorization", "Bearer " + token).with(csrf()))
         .andExpect(status().isUnauthorized());
   }
 }
