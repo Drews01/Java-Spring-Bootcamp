@@ -25,6 +25,8 @@ services:
       - SPRING_MAIL_PORT=${MAIL_PORT:-587}
       - SPRING_MAIL_USERNAME=${MAIL_USERNAME}
       - SPRING_MAIL_PASSWORD=${MAIL_PASSWORD}
+      # Google OAuth (for Google Sign-In)
+      - APP_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
       # File Uploads
       - APP_UPLOAD_DIR=/app/uploads
     volumes:
