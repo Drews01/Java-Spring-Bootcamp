@@ -1,71 +1,118 @@
 version: '3.8'
 
 services:
-  # SQL Server for Production (Linux)
-  sql-server:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: sql-server
-    environment:
-      - ACCEPT_EULA=Y
-      - MSSQL_SA_PASSWORD=${DB_PASSWORD:-Prod_P@ssw0rd_2024!}
-      - MSSQL_PID=Developer
-    ports:
-      - "1433:1433"
-    volumes:
-      - sql_data:/var/opt/mssql
-    restart: always
-
-  # Redis for Production (Linux)
-  redis-server:
-    image: redis:7-alpine
-    container_name: redis-server
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    command: redis-server --appendonly yes
-    restart: always
-
-  # Spring Boot Application
-  loan-app:
-    build:
-      context: ..
-      dockerfile: deploy/Dockerfile
-    container_name: loan-app
-    depends_on:
-      - sql-server
-      - redis-server
-    ports:
-      - "8080:8080"
-    environment:
-      - SPRING_DATASOURCE_URL=jdbc:sqlserver://sql-server:1433;databaseName=LoanDatabase;encrypt=true;trustServerCertificate=true
-      - SPRING_DATASOURCE_USERNAME=sa
-      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-Prod_P@ssw0rd_2024!}
-      - SPRING_DATA_REDIS_HOST=redis-server
-      - SPRING_DATA_REDIS_PORT=6379
-      - APP_SECURITY_JWT_SECRET=${JWT_SECRET:-404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
-      - SPRING_MAIL_HOST=${MAIL_HOST:-sandbox.smtp.mailtrap.io}
-      - SPRING_MAIL_PORT=${MAIL_PORT:-2525}
-      - SPRING_MAIL_USERNAME=${MAIL_USERNAME:-04f199d623e1e97ea9a510b3c6e32e72}
-      - SPRING_MAIL_PASSWORD=${MAIL_PASSWORD:-YOUR_MAILTRAP_PASSWORD_HERE}
-      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH=true
-      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=true
-    restart: always
-
+  # ===========================================
   # Nginx Reverse Proxy
+  # ===========================================
   nginx:
     image: nginx:alpine
     container_name: nginx-proxy
     ports:
       - "80:80"
+      - "443:443"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
     depends_on:
-      - loan-app
-    restart: always
+      app:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - app-network
 
+  # ===========================================
+  # Spring Boot Application
+  # ===========================================
+  app:
+    image: ${DOCKER_IMAGE:-ghcr.io/your-username/loan-app:latest}
+    container_name: loan-app
+    environment:
+      # Database
+      - SPRING_DATASOURCE_URL=jdbc:sqlserver://sqlserver:1433;databaseName=${DB_NAME:-LoanDB};encrypt=true;trustServerCertificate=true
+      - SPRING_DATASOURCE_USERNAME=${DB_USER:-sa}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      # Redis
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+      # JWT
+      - APP_SECURITY_JWT_SECRET=${JWT_SECRET}
+      - APP_SECURITY_JWT_EXPIRATION=${JWT_EXPIRATION:-86400000}
+      # Mail
+      - SPRING_MAIL_HOST=${MAIL_HOST:-smtp.gmail.com}
+      - SPRING_MAIL_PORT=${MAIL_PORT:-587}
+      - SPRING_MAIL_USERNAME=${MAIL_USERNAME}
+      - SPRING_MAIL_PASSWORD=${MAIL_PASSWORD}
+      # File Uploads
+      - APP_UPLOAD_DIR=/app/uploads
+    volumes:
+      - uploads_data:/app/uploads
+      - ./firebase-service-account.json:/app/firebase-service-account.json:ro
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    healthcheck:
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  # ===========================================
+  # SQL Server Database
+  # ===========================================
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: sqlserver
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=${DB_PASSWORD}
+      - MSSQL_PID=Express
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    healthcheck:
+      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$$MSSQL_SA_PASSWORD" -C -Q "SELECT 1" || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  # ===========================================
+  # Redis Cache
+  # ===========================================
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - app-network
+
+# ===========================================
+# Volumes for persistent data
+# ===========================================
 volumes:
-  sql_data:
+  sqlserver_data:
     driver: local
   redis_data:
     driver: local
+  uploads_data:
+    driver: local
+
+# ===========================================
+# Network
+# ===========================================
+networks:
+  app-network:
+    driver: bridge

@@ -34,3 +34,8 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Deployment Secrets ###
+deploy/.env
+deploy/ssl/
+deploy/firebase-service-account.json
