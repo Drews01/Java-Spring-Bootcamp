@@ -13,7 +13,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
 
-/** Firebase configuration for FCM (Firebase Cloud Messaging) push notifications. */
+/**
+ * Firebase configuration for FCM (Firebase Cloud Messaging) push notifications.
+ */
 @Configuration
 @Slf4j
 public class FirebaseConfig {
@@ -27,10 +29,9 @@ public class FirebaseConfig {
       if (FirebaseApp.getApps().isEmpty()) {
         InputStream serviceAccount = new ClassPathResource(serviceAccountPath).getInputStream();
 
-        FirebaseOptions options =
-            FirebaseOptions.builder()
-                .setCredentials(GoogleCredentials.fromStream(serviceAccount))
-                .build();
+        FirebaseOptions options = FirebaseOptions.builder()
+            .setCredentials(GoogleCredentials.fromStream(serviceAccount))
+            .build();
 
         FirebaseApp.initializeApp(options);
         log.info("Firebase application initialized successfully");
@@ -38,13 +39,19 @@ public class FirebaseConfig {
         log.info("Firebase application already initialized");
       }
     } catch (IOException e) {
+      log.warn("Firebase config file not found. Push notifications will be disabled. Error: {}", e.getMessage());
+      // Do not throw exception, allow app to start without Firebase
+    } catch (Exception e) {
       log.error("Failed to initialize Firebase: {}", e.getMessage());
-      throw new RuntimeException("Failed to initialize Firebase", e);
+      // Keep running even if Firebase fails
     }
   }
 
   @Bean
   public FirebaseMessaging firebaseMessaging() {
+    if (FirebaseApp.getApps().isEmpty()) {
+      return null;
+    }
     return FirebaseMessaging.getInstance();
   }
 }
