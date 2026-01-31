@@ -57,6 +57,12 @@ public class LoanApplication {
   @Column(name = "created_at", nullable = false, updatable = false)
   private LocalDateTime createdAt;
 
+  @Column(name = "latitude")
+  private Double latitude;
+
+  @Column(name = "longitude")
+  private Double longitude;
+
   @Column(name = "updated_at", nullable = false)
   private LocalDateTime updatedAt;
 

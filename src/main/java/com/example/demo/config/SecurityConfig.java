@@ -27,8 +27,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 /**
- * Spring Security Configuration. Configures JWT-based authentication with
- * HttpOnly cookies and CSRF
+ * Spring Security Configuration. Configures JWT-based authentication with HttpOnly cookies and CSRF
  * protection.
  */
 @Configuration
@@ -48,43 +47,46 @@ public class SecurityConfig {
     http
         // CSRF Protection with Cookie-based token repository
         .csrf(
-            csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-                .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler())
-                .ignoringRequestMatchers(
-                    "/auth/login",
-                    "/auth/google",
-                    "/auth/register",
-                    "/auth/forgot-password",
-                    "/auth/reset-password"))
+            csrf ->
+                csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                    .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler())
+                    .ignoringRequestMatchers(
+                        "/auth/login",
+                        "/auth/google",
+                        "/auth/register",
+                        "/auth/forgot-password",
+                        "/auth/reset-password"))
         // CORS Configuration
         .cors(cors -> cors.configurationSource(corsConfigurationSource()))
         // Authorization rules
         .authorizeHttpRequests(
-            auth -> auth.requestMatchers(
-                "/auth/login",
-                "/auth/google",
-                "/auth/register",
-                "/auth/forgot-password",
-                "/auth/reset-password",
-                "/auth/logout",
-                "/api/csrf-token")
-                .permitAll()
-                .requestMatchers("/error")
-                .permitAll()
-                .requestMatchers("/api/products/**")
-                .permitAll()
-                .requestMatchers("/uploads/**")
-                .permitAll()
-                .anyRequest()
-                .access(dynamicAuthorizationManager))
+            auth ->
+                auth.requestMatchers(
+                        "/auth/login",
+                        "/auth/google",
+                        "/auth/register",
+                        "/auth/forgot-password",
+                        "/auth/reset-password",
+                        "/auth/logout",
+                        "/api/csrf-token")
+                    .permitAll()
+                    .requestMatchers("/error")
+                    .permitAll()
+                    .requestMatchers("/api/products/**")
+                    .permitAll()
+                    .requestMatchers("/uploads/**")
+                    .permitAll()
+                    .anyRequest()
+                    .access(dynamicAuthorizationManager))
         // Stateless session management
         .sessionManagement(
             session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         // Exception Handling
         .exceptionHandling(
-            exception -> exception
-                .authenticationEntryPoint(new CustomAuthenticationEntryPoint())
-                .accessDeniedHandler(new CustomAccessDeniedHandler()))
+            exception ->
+                exception
+                    .authenticationEntryPoint(new CustomAuthenticationEntryPoint())
+                    .accessDeniedHandler(new CustomAccessDeniedHandler()))
         // JWT Cookie Authentication Filter
         .addFilterBefore(jwtCookieAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

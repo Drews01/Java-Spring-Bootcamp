@@ -225,6 +225,8 @@ public class LoanWorkflowController {
               .currentStatus(loan.getCurrentStatus())
               .createdAt(loan.getCreatedAt())
               .updatedAt(loan.getUpdatedAt())
+              .latitude(loan.getLatitude())
+              .longitude(loan.getLongitude())
               .allowedActions(allowedActions)
               .userNik(
                   loan.getUser().getUserProfile() != null

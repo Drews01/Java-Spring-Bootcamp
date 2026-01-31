@@ -25,6 +25,8 @@ public class LoanQueueItemDTO {
   private LocalDateTime createdAt;
   private LocalDateTime updatedAt;
   private List<String> allowedActions;
+  private Double latitude;
+  private Double longitude;
 
   // New fields from UserProfile
   private String userNik;

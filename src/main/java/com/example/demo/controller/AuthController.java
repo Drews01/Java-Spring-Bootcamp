@@ -29,8 +29,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Authentication Controller. Handles user registration, login, logout, and
- * current user endpoints.
+ * Authentication Controller. Handles user registration, login, logout, and current user endpoints.
  */
 @RestController
 @RequestMapping("/auth")
@@ -51,7 +50,8 @@ public class AuthController {
       @Valid @RequestBody RegisterRequest request, HttpServletResponse response) {
     AuthResponse authResponse = authService.register(request);
     // Set JWT in HttpOnly cookie
-    ResponseCookie jwtCookie = CookieUtil.createJwtCookie(authResponse.token(), jwtExpirationSeconds, secureCookie);
+    ResponseCookie jwtCookie =
+        CookieUtil.createJwtCookie(authResponse.token(), jwtExpirationSeconds, secureCookie);
     response.addHeader(HttpHeaders.SET_COOKIE, jwtCookie.toString());
     return ResponseUtil.created(authResponse, "User registered successfully");
   }
@@ -62,7 +62,8 @@ public class AuthController {
       @Valid @RequestBody AuthRequest request, HttpServletResponse response) {
     AuthResponse authResponse = authService.login(request);
     // Set JWT in HttpOnly cookie
-    ResponseCookie jwtCookie = CookieUtil.createJwtCookie(authResponse.token(), jwtExpirationSeconds, secureCookie);
+    ResponseCookie jwtCookie =
+        CookieUtil.createJwtCookie(authResponse.token(), jwtExpirationSeconds, secureCookie);
     response.addHeader(HttpHeaders.SET_COOKIE, jwtCookie.toString());
     return ResponseUtil.ok(authResponse, "Login successful");
   }
@@ -75,12 +76,14 @@ public class AuthController {
     try {
       AuthResponse authResponse = authService.loginWithGoogle(request.idToken());
       // Set JWT in HttpOnly cookie
-      ResponseCookie jwtCookie = CookieUtil.createJwtCookie(authResponse.token(), jwtExpirationSeconds, secureCookie);
+      ResponseCookie jwtCookie =
+          CookieUtil.createJwtCookie(authResponse.token(), jwtExpirationSeconds, secureCookie);
       response.addHeader(HttpHeaders.SET_COOKIE, jwtCookie.toString());
       return ResponseUtil.ok(authResponse, "Google Login successful");
     } catch (Exception e) {
       e.printStackTrace(); // Simple logging for debugging
-      return ResponseUtil.error(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR,
+      return ResponseUtil.error(
+          org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR,
           "Google Login Error: " + e.getMessage());
     }
   }
@@ -90,15 +93,16 @@ public class AuthController {
   public ResponseEntity<ApiResponse<Void>> logout(
       HttpServletRequest request, HttpServletResponse response) {
     // Try to get token from cookie first, then from header
-    String token = CookieUtil.extractJwtFromCookie(request)
-        .orElseGet(
-            () -> {
-              String authHeader = request.getHeader("Authorization");
-              if (authHeader != null && authHeader.startsWith("Bearer ")) {
-                return authHeader.substring(7);
-              }
-              return null;
-            });
+    String token =
+        CookieUtil.extractJwtFromCookie(request)
+            .orElseGet(
+                () -> {
+                  String authHeader = request.getHeader("Authorization");
+                  if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                    return authHeader.substring(7);
+                  }
+                  return null;
+                });
 
     if (token != null) {
       authService.logout(token);
@@ -120,16 +124,17 @@ public class AuthController {
           org.springframework.http.HttpStatus.UNAUTHORIZED, "Not authenticated");
     }
 
-    CurrentUserDTO currentUser = new CurrentUserDTO(
-        userDetails.getUser().getId(),
-        userDetails.getUser().getUsername(),
-        userDetails.getUser().getEmail(),
-        userDetails.getUser().getRoles().stream()
-            .map(Role::getName)
-            .collect(Collectors.toSet()),
-        userDetails.getUser().getBranch() != null
-            ? userDetails.getUser().getBranch().getName()
-            : null);
+    CurrentUserDTO currentUser =
+        new CurrentUserDTO(
+            userDetails.getUser().getId(),
+            userDetails.getUser().getUsername(),
+            userDetails.getUser().getEmail(),
+            userDetails.getUser().getRoles().stream()
+                .map(Role::getName)
+                .collect(Collectors.toSet()),
+            userDetails.getUser().getBranch() != null
+                ? userDetails.getUser().getBranch().getName()
+                : null);
 
     return ResponseUtil.ok(currentUser, "Current user retrieved successfully");
   }
@@ -157,7 +162,8 @@ public class AuthController {
       HttpServletResponse response) {
     AuthResponse authResponse = authService.refreshAccessToken(request.refreshToken());
     // Set new JWT in HttpOnly cookie
-    ResponseCookie jwtCookie = CookieUtil.createJwtCookie(authResponse.token(), jwtExpirationSeconds, secureCookie);
+    ResponseCookie jwtCookie =
+        CookieUtil.createJwtCookie(authResponse.token(), jwtExpirationSeconds, secureCookie);
     response.addHeader(HttpHeaders.SET_COOKIE, jwtCookie.toString());
     return ResponseUtil.ok(authResponse, "Token refreshed successfully");
   }

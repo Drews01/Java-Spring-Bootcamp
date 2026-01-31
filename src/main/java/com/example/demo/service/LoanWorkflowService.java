@@ -126,6 +126,10 @@ public class LoanWorkflowService {
             .totalAmountToPay(totalAmountToPay)
             .currentStatus(LoanStatus.SUBMITTED.name())
             .isPaid(false)
+            .currentStatus(LoanStatus.SUBMITTED.name())
+            .isPaid(false)
+            .latitude(request.getLatitude())
+            .longitude(request.getLongitude())
             .build();
 
     LoanApplication saved = loanApplicationRepository.save(loanApplication);
@@ -441,8 +445,11 @@ public class LoanWorkflowService {
         .interestRateApplied(loanApplication.getInterestRateApplied())
         .totalAmountToPay(loanApplication.getTotalAmountToPay())
         .currentStatus(loanApplication.getCurrentStatus())
+        .currentStatus(loanApplication.getCurrentStatus())
         .createdAt(loanApplication.getCreatedAt())
         .updatedAt(loanApplication.getUpdatedAt())
+        .latitude(loanApplication.getLatitude())
+        .longitude(loanApplication.getLongitude())
         .build();
   }
 

@@ -105,6 +105,8 @@ public class ActionHistoryService {
         .productName(loan.getProduct() != null ? loan.getProduct().getName() : null)
         .amount(loan.getAmount() != null ? BigDecimal.valueOf(loan.getAmount()) : null)
         .tenureMonths(loan.getTenureMonths())
+        .latitude(loan.getLatitude())
+        .longitude(loan.getLongitude())
         // Applicant Info
         .userId(applicant.getId())
         .username(applicant.getUsername())

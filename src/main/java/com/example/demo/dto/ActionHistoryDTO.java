@@ -21,6 +21,8 @@ public class ActionHistoryDTO {
   private String productName;
   private BigDecimal amount;
   private Integer tenureMonths;
+  private Double latitude;
+  private Double longitude;
 
   // Applicant Info
   private Long userId;
