@@ -7,19 +7,12 @@ import com.example.demo.entity.UserProfile;
 import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.UserProfileRepository;
 import com.example.demo.repository.UserRepository;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 @Service
 @RequiredArgsConstructor
@@ -29,24 +22,23 @@ public class UserProfileService {
   private final UserRepository userRepository;
   private final FileValidationService fileValidationService;
   private final LoanEligibilityService loanEligibilityService;
+  private final StorageService storageService;
 
   @Transactional
   public UserProfileDTO createUserProfile(Long userId, UserProfileDTO dto) {
-    User user =
-        userRepository
-            .findById(userId)
-            .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+    User user = userRepository
+        .findById(userId)
+        .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
 
-    UserProfile userProfile =
-        UserProfile.builder()
-            .user(user)
-            .address(dto.getAddress())
-            .nik(dto.getNik())
-            .ktpPath(dto.getKtpPath())
-            .phoneNumber(dto.getPhoneNumber())
-            .accountNumber(dto.getAccountNumber())
-            .bankName(dto.getBankName())
-            .build();
+    UserProfile userProfile = UserProfile.builder()
+        .user(user)
+        .address(dto.getAddress())
+        .nik(dto.getNik())
+        .ktpPath(dto.getKtpPath())
+        .phoneNumber(dto.getPhoneNumber())
+        .accountNumber(dto.getAccountNumber())
+        .bankName(dto.getBankName())
+        .build();
 
     UserProfile saved = userProfileRepository.save(userProfile);
 
@@ -60,12 +52,10 @@ public class UserProfileService {
 
   @Transactional(readOnly = true)
   public UserProfileDTO getUserProfile(Long userId) {
-    UserProfile userProfile =
-        userProfileRepository
-            .findById(userId)
-            .orElseThrow(
-                () ->
-                    new ResourceNotFoundException("UserProfile not found for user id: " + userId));
+    UserProfile userProfile = userProfileRepository
+        .findById(userId)
+        .orElseThrow(
+            () -> new ResourceNotFoundException("UserProfile not found for user id: " + userId));
     return convertToDTO(userProfile);
   }
 
@@ -78,12 +68,10 @@ public class UserProfileService {
 
   @Transactional
   public UserProfileDTO updateUserProfile(Long userId, UserProfileDTO dto) {
-    UserProfile userProfile =
-        userProfileRepository
-            .findById(userId)
-            .orElseThrow(
-                () ->
-                    new ResourceNotFoundException("UserProfile not found for user id: " + userId));
+    UserProfile userProfile = userProfileRepository
+        .findById(userId)
+        .orElseThrow(
+            () -> new ResourceNotFoundException("UserProfile not found for user id: " + userId));
 
     userProfile.setAddress(dto.getAddress());
     userProfile.setNik(dto.getNik());
@@ -118,68 +106,45 @@ public class UserProfileService {
     // Validate File
     fileValidationService.validateFile(file);
 
-    try {
-      // Create uploads directory if not exists
-      Path uploadLocation = Paths.get("uploads");
-      if (!Files.exists(uploadLocation)) {
-        Files.createDirectories(uploadLocation);
-      }
+    // Upload to storage (local or R2 depending on configuration)
+    String fileUrl = storageService.uploadFile(file, "ktp");
 
-      // Generate unique filename
-      String fileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
-      Path targetPath = uploadLocation.resolve(fileName);
+    // Update UserProfile
+    UserProfile userProfile = userProfileRepository
+        .findById(userId)
+        .orElseThrow(
+            () -> new ResourceNotFoundException(
+                "UserProfile not found for user id: " + userId));
 
-      // Save file
-      Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
+    userProfile.setKtpPath(fileUrl);
+    userProfileRepository.save(userProfile);
 
-      // Update UserProfile
-      UserProfile userProfile =
-          userProfileRepository
-              .findById(userId)
-              .orElseThrow(
-                  () ->
-                      new ResourceNotFoundException(
-                          "UserProfile not found for user id: " + userId));
-
-      userProfile.setKtpPath(targetPath.toString());
-      userProfileRepository.save(userProfile);
-
-      String fileDownloadUri =
-          ServletUriComponentsBuilder.fromCurrentContextPath()
-              .path("/uploads/")
-              .path(fileName)
-              .toUriString();
-
-      return UploadImageResponse.builder()
-          .fileName(fileName)
-          .fileDownloadUri(fileDownloadUri)
-          .fileType(file.getContentType())
-          .size(file.getSize())
-          .build();
-
-    } catch (IOException e) {
-      throw new RuntimeException("Failed to store file " + file.getOriginalFilename(), e);
-    }
+    return UploadImageResponse.builder()
+        .fileName(file.getOriginalFilename())
+        .fileDownloadUri(fileUrl)
+        .fileType(file.getContentType())
+        .size(file.getSize())
+        .build();
   }
 
   /**
    * Check if user profile is complete with all required fields.
    *
    * @param userId the user ID to check
-   * @return true if profile exists and all required fields are filled, false otherwise
+   * @return true if profile exists and all required fields are filled, false
+   *         otherwise
    */
   @Transactional(readOnly = true)
   public boolean isProfileComplete(Long userId) {
     return userProfileRepository
         .findById(userId)
         .map(
-            profile ->
-                isNotBlank(profile.getAddress())
-                    && isNotBlank(profile.getNik())
-                    && isNotBlank(profile.getKtpPath())
-                    && isNotBlank(profile.getPhoneNumber())
-                    && isNotBlank(profile.getAccountNumber())
-                    && isNotBlank(profile.getBankName()))
+            profile -> isNotBlank(profile.getAddress())
+                && isNotBlank(profile.getNik())
+                && isNotBlank(profile.getKtpPath())
+                && isNotBlank(profile.getPhoneNumber())
+                && isNotBlank(profile.getAccountNumber())
+                && isNotBlank(profile.getBankName()))
         .orElse(false);
   }
 
@@ -188,16 +153,8 @@ public class UserProfileService {
   }
 
   private UserProfileDTO convertToDTO(UserProfile userProfile) {
-    String ktpUrl = null;
-    if (userProfile.getKtpPath() != null && !userProfile.getKtpPath().isEmpty()) {
-      // Extract filename from path and build full URL
-      String filename = Paths.get(userProfile.getKtpPath()).getFileName().toString();
-      ktpUrl =
-          ServletUriComponentsBuilder.fromCurrentContextPath()
-              .path("/uploads/")
-              .path(filename)
-              .toUriString();
-    }
+    // ktpPath now stores the full URL (R2 public URL or local URL)
+    String ktpUrl = userProfile.getKtpPath();
 
     return UserProfileDTO.builder()
         .username(userProfile.getUser().getUsername())
