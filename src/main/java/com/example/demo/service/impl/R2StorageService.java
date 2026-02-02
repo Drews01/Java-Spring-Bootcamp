@@ -34,6 +34,9 @@ public class R2StorageService implements StorageService {
   @Value("${app.storage.r2.bucket}")
   private String bucket;
 
+  @Value("${app.storage.r2.custom-domain:}")
+  private String customDomain;
+
   @Value("${app.storage.r2.public-url}")
   private String publicUrl;
 
@@ -67,8 +70,9 @@ public class R2StorageService implements StorageService {
       s3Client.putObject(
           putRequest, RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
 
-      // Return public URL
-      return publicUrl + "/" + fileName;
+      // Return URL using custom domain if configured, otherwise use public URL
+      String baseUrl = (customDomain != null && !customDomain.isEmpty()) ? customDomain : publicUrl;
+      return baseUrl + "/" + fileName;
     } catch (IOException e) {
       throw new RuntimeException("Failed to upload file to R2: " + file.getOriginalFilename(), e);
     }

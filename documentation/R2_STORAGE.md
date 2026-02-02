@@ -47,6 +47,19 @@ After creation, note down:
 4. Enable **R2.dev subdomain**
 5. Copy the URL (e.g., `https://pub-xxx.r2.dev`) → `R2_PUBLIC_URL`
 
+### Step 4: Connect Custom Domain (Recommended)
+
+Using a custom domain provides cleaner URLs and better CDN integration.
+
+1. Go to **R2 Object Storage** → Click your bucket
+2. Go to **Settings** tab
+3. Under **Custom Domains**, click **Connect Domain**
+4. Enter your subdomain (e.g., `storage.yourdomain.com`)
+5. Click **Continue** and follow DNS verification steps
+6. Once verified, your custom domain URL becomes → `R2_CUSTOM_DOMAIN`
+
+> **Note**: When `R2_CUSTOM_DOMAIN` is set, it takes priority over `R2_PUBLIC_URL`.
+
 ---
 
 ## VPS Configuration
@@ -62,6 +75,8 @@ R2_ENDPOINT=https://<ACCOUNT_ID>.r2.cloudflarestorage.com
 R2_ACCESS_KEY=<your-access-key-id>
 R2_SECRET_KEY=<your-secret-access-key>
 R2_BUCKET=bootcamp
+# Use custom domain (recommended) OR public URL
+R2_CUSTOM_DOMAIN=https://storage.yourdomain.com
 R2_PUBLIC_URL=https://pub-xxx.r2.dev
 ```
 
@@ -103,6 +118,8 @@ R2_ENDPOINT=https://59a1262a0a04ed088283cea2459542c0.r2.cloudflarestorage.com
 R2_ACCESS_KEY=your-r2-access-key
 R2_SECRET_KEY=your-r2-secret-key
 R2_BUCKET=bootcamp
+# Custom domain (recommended) - takes priority over public URL
+R2_CUSTOM_DOMAIN=https://storage.yourdomain.com
 R2_PUBLIC_URL=https://pub-xxxx.r2.dev
 
 # ===========================================
