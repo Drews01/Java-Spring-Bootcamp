@@ -1,227 +1,94 @@
-# Spring Boot REST API - Testing Guide
+# Unit Testing Documentation
 
-## Test Structure
+This document outlines the unit testing strategy and coverage implemented for the Spring Boot Loan Application.
 
-Comprehensive test suite telah dibuat untuk semua layer aplikasi:
+## Overview
 
-### 1. Repository Tests (Unit Tests dengan @DataJpaTest)
+We have implemented comprehensive unit tests for the core service layer of the application. The tests focus on business logic verification, happy path scenarios, and critical validation rules including IDOR (Insecure Direct Object Reference) protection.
 
-#### [RoleRepositoryTest.java](file:///c:/Users/Andrew/Desktop/Bootcamp/Spring%20Java%20Bootcamp/Java%20Spring%20Bootcamp/src/test/java/com/example/demo/repository/RoleRepositoryTest.java)
-- `testSaveRole()` - Test save role ke database
-- `testFindByName_WhenExists()` - Test find role by name (exists)
-- `testFindByName_WhenNotExists()` - Test find role by name (not found)
-- `testFindAll()` - Test get all roles
-- `testDeleteRole()` - Test delete role
-
-#### [UserRepositoryTest.java](file:///c:/Users/Andrew/Desktop/Bootcamp/Spring%20Java%20Bootcamp/Java%20Spring%20Bootcamp/src/test/java/com/example/demo/repository/UserRepositoryTest.java)
-- `testSaveUser()` - Test save user tanpa roles
-- `testSaveUserWithRoles()` - Test save user dengan roles (Many-to-Many)
-- `testFindByUsername_WhenExists()` - Test find user by username (exists)
-- `testFindByUsername_WhenNotExists()` - Test find user by username (not found)
-- `testFindAll()` - Test get all users
-- `testDeleteUser()` - Test delete user
-- `testManyToManyRelationship()` - Test Many-to-Many relationship integrity
-
----
-
-### 2. Service Tests (Unit Tests dengan Mockito)
-
-#### [RoleServiceTest.java](file:///c:/Users/Andrew/Desktop/Bootcamp/Spring%20Java%20Bootcamp/Java%20Spring%20Bootcamp/src/test/java/com/example/demo/service/RoleServiceTest.java)
-- `testCreateRole()` - Test create role
-- `testGetAllRoles()` - Test get all roles
-- `testGetAllRoles_EmptyList()` - Test get all roles (empty)
-
-#### [UserServiceTest.java](file:///c:/Users/Andrew/Desktop/Bootcamp/Spring%20Java%20Bootcamp/Java%20Spring%20Bootcamp/src/test/java/com/example/demo/service/UserServiceTest.java)
-- `testCreateUser()` - Test create user tanpa roles
-- `testCreateUserWithRoles()` - Test create user dengan roles
-- `testGetAllUsers()` - Test get all users
-- `testGetAllUsers_EmptyList()` - Test get all users (empty)
-- `testGetAllUsers_WithRoles()` - Test get all users dengan roles
-
----
-
-### 3. Controller Tests (Integration Tests dengan @WebMvcTest)
-
-#### [RoleControllerTest.java](file:///c:/Users/Andrew/Desktop/Bootcamp/Spring%20Java%20Bootcamp/Java%20Spring%20Bootcamp/src/test/java/com/example/demo/controller/RoleControllerTest.java)
-- `testGetAllRoles()` - Test GET /roles
-- `testGetAllRoles_EmptyList()` - Test GET /roles (empty)
-- `testCreateRole()` - Test POST /roles
-- `testCreateRole_WithId()` - Test POST /roles dengan ID
-
-#### [UserControllerTest.java](file:///c:/Users/Andrew/Desktop/Bootcamp/Spring%20Java%20Bootcamp/Java%20Spring%20Bootcamp/src/test/java/com/example/demo/controller/UserControllerTest.java)
-- `testGetAllUsers()` - Test GET /users dengan roles
-- `testGetAllUsers_EmptyList()` - Test GET /users (empty)
-- `testCreateUser()` - Test POST /users tanpa roles
-- `testCreateUserWithRoles()` - Test POST /users dengan roles
-- `testCreateUser_InactiveUser()` - Test POST /users (inactive user)
-
----
-
-## Test Configuration
-
-### [application.yml (test)](file:///c:/Users/Andrew/Desktop/Bootcamp/Spring%20Java%20Bootcamp/Java%20Spring%20Bootcamp/src/test/resources/application.yml)
-```yaml
-spring:
-  datasource:
-    url: jdbc:h2:mem:testdb
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
-  
-  jpa:
-    hibernate:
-      ddl-auto: create-drop
-    show-sql: true
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.H2Dialect
-```
-
-**Mengapa H2?**
-- In-memory database untuk testing (cepat, isolated)
-- Tidak perlu SQL Server running saat testing
-- Auto create-drop tables setiap test
-
----
-
-## Running Tests
-
-### Run All Tests
-```bash
-./mvnw test
-```
-
-### Run Specific Test Class
-```bash
-./mvnw test -Dtest=UserRepositoryTest
-./mvnw test -Dtest=RoleServiceTest
-./mvnw test -Dtest=UserControllerTest
-```
-
-### Run Specific Test Method
-```bash
-./mvnw test -Dtest=UserRepositoryTest#testSaveUser
-```
-
-### Skip Tests (saat build)
-```bash
-./mvnw clean install -DskipTests
-```
-
----
+**Technology Stack:**
+- **JUnit 5**: Testing framework
+- **Mockito**: Mocking dependencies (Repositories, External Services)
+- **Spring Boot Test**: Integration with Spring context (using `TestConfig` for mocks)
 
 ## Test Coverage
 
-### Repository Layer ✅
-- CRUD operations
-- Custom query methods (findByUsername, findByName)
-- Many-to-Many relationship
-- Delete operations
+We covered **8 Service Classes** with a total of **57 Test Cases**.
 
-### Service Layer ✅
-- Business logic
-- Repository interaction (mocked)
-- Empty list handling
+### 1. Loan Eligibility Service (`LoanEligibilityServiceTest`)
+**Focus:** Credit limit calculations, tier logic, and upgrades.
+- `canApplyForLoan`: Verifies logical check against credit limit.
+- `getRemainingCreditLimit`: Ensures active loans are subtracted from limit.
+- `getCurrentTierProduct`: Verifies highest tier selection.
+- `processLoanPayment`: Checks loan status updates and used amount recalculation.
+- `checkAndUpgradeTier`: Validates tier upgrade threshold logic.
 
-### Controller Layer ✅
-- REST endpoints (GET, POST)
-- JSON serialization/deserialization
-- HTTP status codes (200 OK, 201 CREATED)
-- Request/Response validation
+### 2. Loan Workflow Service (`LoanWorkflowServiceTest`)
+**Focus:** State machine transitions and validations.
+- `submitLoan`: Validates loan creation with correct initial status.
+- `performAction`: Tests all state transitions (SUBMIT -> IN_REVIEW -> WAITING_APPROVAL -> APPROVED -> DISBURSED).
+- `validateTransition`: Ensures invalid transitions throw exceptions.
+- `validateActorPermission`: Mock tests for role-based action permission.
 
----
+### 3. Loan Application Service (`LoanApplicationServiceTest`)
+**Focus:** CRUD operations.
+- `createLoanApplication`: Verifies entity mapping and saving.
+- `getLoanApplications`: specific queries by User ID and Status.
 
-## Test Technologies
+### 4. Product Service (`ProductServiceTest`)
+**Focus:** Product validation and management.
+- `createProduct`: Validates duplicate codes and invalid amount/tenure ranges.
+- `getAllProducts`: Ensures only non-deleted products are returned.
 
-- **JUnit 5** - Testing framework
-- **Mockito** - Mocking framework untuk service tests
-- **AssertJ** - Fluent assertions
-- **@DataJpaTest** - Repository testing dengan H2
-- **@WebMvcTest** - Controller testing dengan MockMvc
-- **H2 Database** - In-memory database untuk testing
+### 5. User Service (`UserServiceTest`)
+**Focus:** User management and IDOR security.
+- `setUserActiveStatus`: Prevents self-deactivation and deactivating the last admin.
+- `updateUserRoles`: Prevents removing own ADMIN role.
+- `createUserByAdmin`: Validates unique fields.
 
----
+### 6. Auth Service (`AuthServiceTest`)
+**Focus:** Security and Authentication.
+- `register`: New user registration logic.
+- `login`: Credential validation and token generation.
+- `logout`: Token blacklisting.
 
-## Test Best Practices
+### 7. RBAC Service (`RbacServiceTest`)
+**Focus:** Role-Menu management.
+- `getRoleAccess`: Hierarchy of role permissions.
+- `updateRoleAccess`: Modifying permissions.
 
-### 1. Arrange-Act-Assert Pattern
-```java
-@Test
-void testSaveUser() {
-    // Arrange (Given)
-    User user = User.builder()
-            .username("testuser")
-            .build();
-    
-    // Act (When)
-    User savedUser = userRepository.save(user);
-    
-    // Assert (Then)
-    assertThat(savedUser).isNotNull();
-    assertThat(savedUser.getId()).isNotNull();
-}
+### 8. Access Control Service (`AccessControlServiceTest`)
+**Focus:** Permission checks.
+- `hasMenu`: Boolean check validation.
+
+## How to Run Tests
+
+You can run the tests using Maven from the command line:
+
+```bash
+# Run all tests
+mvn test
+
+# Run a specific test class
+mvn test -Dtest=LoanEligibilityServiceTest
+
+# Run all tests in a package
+mvn test -Dtest=com.example.demo.service.*
 ```
 
-### 2. Test Isolation
-- Setiap test independent
-- Menggunakan `@BeforeEach` untuk setup
-- H2 database di-reset setiap test class
+## detailed Test Scenarios
 
-### 3. Meaningful Test Names
-- `testMethodName_Scenario_ExpectedResult`
-- Contoh: `testFindByUsername_WhenNotExists`
+### Loan Workflow State Machine
+The tests verify the following strict lifecycle:
+1. **SUBMITTED** (User)
+2. **IN_REVIEW** (Marketing) via `COMMENT`
+3. **WAITING_APPROVAL** (Marketing) via `FORWARD_TO_MANAGER`
+4. **APPROVED_WAITING_DISBURSEMENT** (Branch Manager) via `APPROVE` or **REJECTED** via `REJECT`
+5. **DISBURSED** (Back Office) via `DISBURSE`
+6. **PAID** (User/System) via Payment
 
-### 4. Mock External Dependencies
-- Service tests mock repository
-- Controller tests mock service
-- Tidak ada real database calls di unit tests
-
----
-
-## Expected Test Results
-
-Jika semua test berjalan sukses:
-
-```
-[INFO] Tests run: 24, Failures: 0, Errors: 0, Skipped: 0
-[INFO] BUILD SUCCESS
-```
-
-**Breakdown:**
-- Repository Tests: 12 tests
-- Service Tests: 8 tests
-- Controller Tests: 9 tests
-- **Total: 29 tests**
-
----
-
-## Troubleshooting
-
-### Issue: Tests tidak compile
-**Solution**: Pastikan H2 dependency ada di pom.xml:
-```xml
-<dependency>
-    <groupId>com.h2database</groupId>
-    <artifactId>h2</artifactId>
-    <scope>test</scope>
-</dependency>
-```
-
-### Issue: @DataJpaTest not found
-**Solution**: Pastikan spring-boot-starter-test dependency ada
-
-### Issue: Tests fail dengan SQL Server connection error
-**Solution**: Tests menggunakan H2, bukan SQL Server. Check test/resources/application.yml
-
----
-
-## Summary
-
-✅ **29 comprehensive tests** covering all layers  
-✅ **Repository tests** dengan @DataJpaTest dan H2  
-✅ **Service tests** dengan Mockito mocking  
-✅ **Controller tests** dengan @WebMvcTest dan MockMvc  
-✅ **Test configuration** dengan H2 in-memory database  
-✅ **Best practices** (AAA pattern, isolation, meaningful names)  
-
-Tests siap dijalankan dengan `./mvnw test`! 🧪
+### Security & IDOR Tests
+Special attention was paid to `UserService` to ensure:
+- An Admin cannot deactivate themselves.
+- An Admin cannot remove their own ADMIN role.
+- The system must always have at least one active Admin.

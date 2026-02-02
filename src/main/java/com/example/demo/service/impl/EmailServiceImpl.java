@@ -10,30 +10,34 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class EmailServiceImpl implements EmailService {
 
-  private final JavaMailSender emailSender;
+    private final JavaMailSender emailSender;
 
-  @Override
-  public void sendSimpleMessage(String to, String subject, String text) {
-    SimpleMailMessage message = new SimpleMailMessage();
-    message.setTo(to);
-    message.setSubject(subject);
-    message.setText(text);
-    emailSender.send(message);
-  }
+    @org.springframework.beans.factory.annotation.Value("${app.mail.from}")
+    private String fromEmail;
 
-  @Override
-  public void sendLoanDisbursementEmail(String to, String userName, Long loanId, Double amount) {
-    try {
-      jakarta.mail.internet.MimeMessage message = emailSender.createMimeMessage();
-      org.springframework.mail.javamail.MimeMessageHelper helper =
-          new org.springframework.mail.javamail.MimeMessageHelper(message, true, "UTF-8");
+    @Override
+    public void sendSimpleMessage(String to, String subject, String text) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(fromEmail);
+        message.setTo(to);
+        message.setSubject(subject);
+        message.setText(text);
+        emailSender.send(message);
+    }
 
-      helper.setTo(to);
-      helper.setSubject("Your Loan Has Been Disbursed - Loan #" + loanId);
+    @Override
+    public void sendLoanDisbursementEmail(String to, String userName, Long loanId, Double amount) {
+        try {
+            jakarta.mail.internet.MimeMessage message = emailSender.createMimeMessage();
+            org.springframework.mail.javamail.MimeMessageHelper helper = new org.springframework.mail.javamail.MimeMessageHelper(
+                    message, true, "UTF-8");
 
-      String htmlContent =
-          String.format(
-              """
+            helper.setFrom(fromEmail);
+            helper.setTo(to);
+            helper.setSubject("Your Loan Has Been Disbursed - Loan #" + loanId);
+
+            String htmlContent = String.format(
+                    """
                             <!DOCTYPE html>
                             <html>
                             <head>
@@ -108,28 +112,28 @@ public class EmailServiceImpl implements EmailService {
                             </body>
                             </html>
                             """,
-              userName, loanId, amount);
+                    userName, loanId, amount);
 
-      helper.setText(htmlContent, true);
-      emailSender.send(message);
-    } catch (jakarta.mail.MessagingException e) {
-      throw new RuntimeException("Failed to send loan disbursement email", e);
+            helper.setText(htmlContent, true);
+            emailSender.send(message);
+        } catch (jakarta.mail.MessagingException e) {
+            throw new RuntimeException("Failed to send loan disbursement email", e);
+        }
     }
-  }
 
-  @Override
-  public void sendPasswordResetEmail(String to, String userName, String resetLink) {
-    try {
-      jakarta.mail.internet.MimeMessage message = emailSender.createMimeMessage();
-      org.springframework.mail.javamail.MimeMessageHelper helper =
-          new org.springframework.mail.javamail.MimeMessageHelper(message, true, "UTF-8");
+    @Override
+    public void sendPasswordResetEmail(String to, String userName, String resetLink) {
+        try {
+            jakarta.mail.internet.MimeMessage message = emailSender.createMimeMessage();
+            org.springframework.mail.javamail.MimeMessageHelper helper = new org.springframework.mail.javamail.MimeMessageHelper(
+                    message, true, "UTF-8");
 
-      helper.setTo(to);
-      helper.setSubject("Password Reset Request");
+            helper.setFrom(fromEmail);
+            helper.setTo(to);
+            helper.setSubject("Password Reset Request");
 
-      String htmlContent =
-          String.format(
-              """
+            String htmlContent = String.format(
+                    """
                             <!DOCTYPE html>
                             <html>
                             <head>
@@ -186,28 +190,28 @@ public class EmailServiceImpl implements EmailService {
                             </body>
                             </html>
                             """,
-              userName, resetLink, resetLink);
+                    userName, resetLink, resetLink);
 
-      helper.setText(htmlContent, true);
-      emailSender.send(message);
-    } catch (jakarta.mail.MessagingException e) {
-      throw new RuntimeException("Failed to send password reset email", e);
+            helper.setText(htmlContent, true);
+            emailSender.send(message);
+        } catch (jakarta.mail.MessagingException e) {
+            throw new RuntimeException("Failed to send password reset email", e);
+        }
     }
-  }
 
-  @Override
-  public void sendWelcomeEmail(String to, String userName, String loginLink) {
-    try {
-      jakarta.mail.internet.MimeMessage message = emailSender.createMimeMessage();
-      org.springframework.mail.javamail.MimeMessageHelper helper =
-          new org.springframework.mail.javamail.MimeMessageHelper(message, true, "UTF-8");
+    @Override
+    public void sendWelcomeEmail(String to, String userName, String loginLink) {
+        try {
+            jakarta.mail.internet.MimeMessage message = emailSender.createMimeMessage();
+            org.springframework.mail.javamail.MimeMessageHelper helper = new org.springframework.mail.javamail.MimeMessageHelper(
+                    message, true, "UTF-8");
 
-      helper.setTo(to);
-      helper.setSubject("Welcome to Loan Management System!");
+            helper.setFrom(fromEmail);
+            helper.setTo(to);
+            helper.setSubject("Welcome to Loan Management System!");
 
-      String htmlContent =
-          String.format(
-              """
+            String htmlContent = String.format(
+                    """
                             <!DOCTYPE html>
                             <html>
                             <head>
@@ -265,12 +269,12 @@ public class EmailServiceImpl implements EmailService {
                             </body>
                             </html>
                             """,
-              userName, loginLink, loginLink);
+                    userName, loginLink, loginLink);
 
-      helper.setText(htmlContent, true);
-      emailSender.send(message);
-    } catch (jakarta.mail.MessagingException e) {
-      throw new RuntimeException("Failed to send welcome email", e);
+            helper.setText(htmlContent, true);
+            emailSender.send(message);
+        } catch (jakarta.mail.MessagingException e) {
+            throw new RuntimeException("Failed to send welcome email", e);
+        }
     }
-  }
 }
