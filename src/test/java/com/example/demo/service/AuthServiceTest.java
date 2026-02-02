@@ -12,6 +12,7 @@ import com.example.demo.dto.RegisterRequest;
 import com.example.demo.entity.Role;
 import com.example.demo.entity.User;
 import com.example.demo.repository.RoleRepository;
+import com.example.demo.repository.UserProfileRepository;
 import com.example.demo.repository.UserRepository;
 import com.example.demo.security.JwtService;
 import java.util.Collections;
@@ -28,6 +29,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 @Import(TestConfig.class)
@@ -35,6 +37,7 @@ public class AuthServiceTest {
 
   @Mock private UserRepository userRepository;
   @Mock private RoleRepository roleRepository;
+  @Mock private UserProfileRepository userProfileRepository;
   @Mock private PasswordEncoder passwordEncoder;
   @Mock private JwtService jwtService;
   @Mock private AuthenticationManager authenticationManager;
@@ -60,6 +63,8 @@ public class AuthServiceTest {
             .roles(new HashSet<>(Collections.singletonList(userRole)))
             .isActive(true)
             .build();
+
+    ReflectionTestUtils.setField(authService, "userProfileRepository", userProfileRepository);
   }
 
   @Test

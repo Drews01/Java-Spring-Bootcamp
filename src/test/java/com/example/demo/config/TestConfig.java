@@ -2,6 +2,7 @@ package com.example.demo.config;
 
 import static org.mockito.Mockito.mock;
 
+import com.example.demo.service.StorageService;
 import com.google.firebase.messaging.FirebaseMessaging;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
@@ -51,6 +52,12 @@ public class TestConfig {
   @Primary
   public com.example.demo.service.EmailService emailService() {
     return mock(com.example.demo.service.EmailService.class);
+  }
+
+  @Bean
+  @Primary
+  public StorageService storageService() {
+    return mock(StorageService.class);
   }
 
   static class StubTokenBlacklistService extends com.example.demo.service.TokenBlacklistService {

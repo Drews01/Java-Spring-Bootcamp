@@ -46,3 +46,7 @@ app:
   # Google OAuth (test placeholder - required by AuthService)
   google:
     client-id: test-client-id-for-testing
+  
+  # Mail configuration
+  mail:
+    from: test@example.com
