@@ -110,11 +110,12 @@ public class UserProfileService {
     String fileUrl = storageService.uploadFile(file, "ktp");
 
     // Update UserProfile
-    UserProfile userProfile = userProfileRepository
-        .findById(userId)
-        .orElseThrow(
-            () -> new ResourceNotFoundException(
-                "UserProfile not found for user id: " + userId));
+    UserProfile userProfile = userProfileRepository.findById(userId)
+        .orElseGet(() -> {
+          User user = userRepository.findById(userId)
+              .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
+          return userProfileRepository.save(UserProfile.builder().user(user).build());
+        });
 
     userProfile.setKtpPath(fileUrl);
     userProfileRepository.save(userProfile);
