@@ -15,6 +15,9 @@ public interface LoanHistoryRepository extends JpaRepository<LoanHistory, Long> 
   List<LoanHistory> findByLoanApplication_LoanApplicationIdOrderByCreatedAtDesc(
       Long loanApplicationId);
 
+  List<LoanHistory> findByLoanApplication_LoanApplicationIdOrderByCreatedAtAsc(
+      Long loanApplicationId);
+
   List<LoanHistory> findByActorUser_Id(Long actorUserId);
 
   List<LoanHistory> findByAction(String action);

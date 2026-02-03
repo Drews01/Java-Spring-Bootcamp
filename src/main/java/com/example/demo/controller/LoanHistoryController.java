@@ -3,6 +3,7 @@ package com.example.demo.controller;
 import com.example.demo.base.ApiResponse;
 import com.example.demo.base.ResponseUtil;
 import com.example.demo.dto.LoanHistoryDTO;
+import com.example.demo.dto.LoanMilestoneDTO;
 import com.example.demo.service.LoanHistoryService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +37,13 @@ public class LoanHistoryController {
     List<LoanHistoryDTO> loanHistories =
         loanHistoryService.getLoanHistoryByLoanApplicationId(loanApplicationId);
     return ResponseUtil.ok(loanHistories, "Loan history retrieved successfully");
+  }
+
+  @GetMapping("/milestones/{loanApplicationId}")
+  public ResponseEntity<ApiResponse<List<LoanMilestoneDTO>>> getLoanMilestones(
+      @PathVariable Long loanApplicationId) {
+    List<LoanMilestoneDTO> milestones = loanHistoryService.getLoanMilestones(loanApplicationId);
+    return ResponseUtil.ok(milestones, "Loan milestones retrieved successfully");
   }
 
   @GetMapping
