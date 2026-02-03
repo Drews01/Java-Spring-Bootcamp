@@ -20,6 +20,7 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 /** Cloudflare R2 storage implementation using AWS S3 SDK. */
 @Service
 @ConditionalOnProperty(name = "app.storage.type", havingValue = "r2")
+@lombok.extern.slf4j.Slf4j
 public class R2StorageService implements StorageService {
 
   @Value("${app.storage.r2.endpoint}")
@@ -44,6 +45,18 @@ public class R2StorageService implements StorageService {
 
   @PostConstruct
   public void init() {
+    log.info("Initializing R2StorageService");
+    log.info("R2 Endpoint: {}", endpoint);
+    log.info("R2 Bucket: {}", bucket);
+    log.info("R2 Custom Domain: '{}'", customDomain);
+    log.info("R2 Public URL: '{}'", publicUrl);
+
+    if (customDomain != null && !customDomain.isEmpty()) {
+      log.info("Using Custom Domain for file URLs: {}", customDomain);
+    } else {
+      log.info("Using Public URL for file URLs: {}", publicUrl);
+    }
+
     AwsBasicCredentials credentials = AwsBasicCredentials.create(accessKey, secretKey);
     s3Client =
         S3Client.builder()
@@ -72,7 +85,11 @@ public class R2StorageService implements StorageService {
 
       // Return URL using custom domain if configured, otherwise use public URL
       String baseUrl = (customDomain != null && !customDomain.isEmpty()) ? customDomain : publicUrl;
-      return baseUrl + "/" + fileName;
+      String finalUrl = baseUrl + "/" + fileName;
+
+      log.info("Uploaded file to R2. Generated URL: {}", finalUrl);
+
+      return finalUrl;
     } catch (IOException e) {
       throw new RuntimeException("Failed to upload file to R2: " + file.getOriginalFilename(), e);
     }
