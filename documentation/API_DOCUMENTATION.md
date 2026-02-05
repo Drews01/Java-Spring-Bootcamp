@@ -13,6 +13,7 @@ Base URL: `/api` (unless otherwise noted, e.g., `/auth`)
 8. [Products](#products)
 9. [Staff Dashboard](#staff-dashboard)
 10. [System & Utilities](#system--utilities)
+11. [Admin](#admin)
 
 ---
 
@@ -400,3 +401,74 @@ Base URL: `/api/notifications`
 ### CSRF
 **GET** `/api/csrf-token`
 Get CSRF token for state-changing requests in Single Page Apps.
+
+---
+
+## Admin
+Base URL: `/api/admin`
+
+> [!NOTE]
+> All admin endpoints require `ADMIN_MODULE` menu permission.
+
+### Dashboard
+**GET** `/api/admin/dashboard`
+Returns admin dashboard welcome message.
+
+### System Logs
+**GET** `/api/admin/system-logs`
+Returns system logs placeholder.
+
+### Get All Loan Applications
+**GET** `/api/admin/loan-applications`
+Retrieves all loan applications with profile information and current bucket status.
+
+**Query Parameters:**
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `page` | int | 0 | Page number (0-indexed) |
+| `size` | int | 20 | Number of items per page |
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Loan applications retrieved successfully",
+  "data": [
+    {
+      "loanApplicationId": 1,
+      "amount": 5000000.0,
+      "tenureMonths": 12,
+      "interestRateApplied": 12.0,
+      "totalAmountToPay": 5661360.0,
+      "productName": "Bronze Tier",
+      "createdAt": "2026-02-01T10:30:00",
+      "updatedAt": "2026-02-02T14:20:00",
+      "userId": 5,
+      "userName": "John Doe",
+      "userEmail": "john@example.com",
+      "profileId": 5,
+      "nik": "1234567890123456",
+      "phoneNumber": "081234567890",
+      "bankName": "BCA",
+      "accountNumber": "1234567890",
+      "currentStatus": "IN_REVIEW",
+      "displayStatus": "In Review",
+      "currentBucket": "MARKETING",
+      "branchId": 1,
+      "branchName": "Jakarta Branch",
+      "latitude": -6.2088,
+      "longitude": 106.8456
+    }
+  ],
+  "statusCode": 200,
+  "timestamp": "2026-02-05T10:14:56"
+}
+```
+
+**Bucket Values:**
+| Bucket | Status Values |
+|--------|---------------|
+| `MARKETING` | SUBMITTED, IN_REVIEW |
+| `BRANCH_MANAGER` | WAITING_APPROVAL |
+| `BACK_OFFICE` | APPROVED_WAITING_DISBURSEMENT |
+| `COMPLETED` | DISBURSED, PAID, REJECTED |
