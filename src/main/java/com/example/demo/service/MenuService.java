@@ -2,6 +2,7 @@ package com.example.demo.service;
 
 import com.example.demo.dto.MenuDTO;
 import com.example.demo.entity.Menu;
+import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.MenuRepository;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -33,7 +34,7 @@ public class MenuService {
     Menu menu =
         menuRepository
             .findById(menuId)
-            .orElseThrow(() -> new RuntimeException("Menu not found with id: " + menuId));
+            .orElseThrow(() -> new ResourceNotFoundException("Menu", "id", menuId));
     return convertToDTO(menu);
   }
 
@@ -47,7 +48,7 @@ public class MenuService {
     Menu menu =
         menuRepository
             .findById(menuId)
-            .orElseThrow(() -> new RuntimeException("Menu not found with id: " + menuId));
+            .orElseThrow(() -> new ResourceNotFoundException("Menu", "id", menuId));
 
     menu.setCode(dto.getCode());
     menu.setName(dto.getName());

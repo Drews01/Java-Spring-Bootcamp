@@ -17,12 +17,12 @@ public class FileValidationService {
   public void validateFile(MultipartFile file) {
     try {
       if (file.isEmpty()) {
-        throw new RuntimeException("File is empty");
+        throw new IllegalArgumentException("File is empty");
       }
 
       String detectedType = tika.detect(file.getInputStream());
       if (!ALLOWED_MIME_TYPES.contains(detectedType)) {
-        throw new RuntimeException(
+        throw new IllegalArgumentException(
             "Invalid file type. Detected: " + detectedType + ". Allowed: " + ALLOWED_MIME_TYPES);
       }
 
@@ -32,13 +32,13 @@ public class FileValidationService {
         // Log warning or throw error depending on strictness
         // creating a stricter check here
         if (!isCompatible(detectedType, contentType)) {
-          throw new RuntimeException(
+          throw new IllegalArgumentException(
               "File content type mismatch. Header: " + contentType + ", Detected: " + detectedType);
         }
       }
 
     } catch (IOException e) {
-      throw new RuntimeException("Failed to validate file", e);
+      throw new IllegalArgumentException("Failed to validate file: " + e.getMessage());
     }
   }
 

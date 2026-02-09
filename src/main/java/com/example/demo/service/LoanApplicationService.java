@@ -4,6 +4,7 @@ import com.example.demo.dto.LoanApplicationDTO;
 import com.example.demo.entity.LoanApplication;
 import com.example.demo.entity.Product;
 import com.example.demo.entity.User;
+import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.LoanApplicationRepository;
 import com.example.demo.repository.ProductRepository;
 import com.example.demo.repository.UserRepository;
@@ -26,13 +27,12 @@ public class LoanApplicationService {
     User user =
         userRepository
             .findById(dto.getUserId())
-            .orElseThrow(() -> new RuntimeException("User not found with id: " + dto.getUserId()));
+            .orElseThrow(() -> new ResourceNotFoundException("User", "id", dto.getUserId()));
 
     Product product =
         productRepository
             .findById(dto.getProductId())
-            .orElseThrow(
-                () -> new RuntimeException("Product not found with id: " + dto.getProductId()));
+            .orElseThrow(() -> new ResourceNotFoundException("Product", "id", dto.getProductId()));
 
     LoanApplication loanApplication =
         LoanApplication.builder()
@@ -54,9 +54,7 @@ public class LoanApplicationService {
         loanApplicationRepository
             .findById(loanApplicationId)
             .orElseThrow(
-                () ->
-                    new RuntimeException(
-                        "LoanApplication not found with id: " + loanApplicationId));
+                () -> new ResourceNotFoundException("LoanApplication", "id", loanApplicationId));
     return convertToDTO(loanApplication);
   }
 
@@ -87,9 +85,7 @@ public class LoanApplicationService {
         loanApplicationRepository
             .findById(loanApplicationId)
             .orElseThrow(
-                () ->
-                    new RuntimeException(
-                        "LoanApplication not found with id: " + loanApplicationId));
+                () -> new ResourceNotFoundException("LoanApplication", "id", loanApplicationId));
 
     loanApplication.setAmount(dto.getAmount());
     loanApplication.setTenureMonths(dto.getTenureMonths());

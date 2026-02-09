@@ -10,6 +10,7 @@ import com.example.demo.entity.LoanApplication;
 import com.example.demo.entity.Product;
 import com.example.demo.entity.User;
 import com.example.demo.enums.LoanStatus;
+import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.LoanApplicationRepository;
 import com.example.demo.repository.ProductRepository;
 import com.example.demo.repository.UserRepository;
@@ -97,7 +98,8 @@ public class LoanApplicationServiceTest {
     when(loanApplicationRepository.findById(anyLong())).thenReturn(Optional.empty());
 
     // Act & Assert
-    assertThrows(RuntimeException.class, () -> loanApplicationService.getLoanApplication(999L));
+    assertThrows(
+        ResourceNotFoundException.class, () -> loanApplicationService.getLoanApplication(999L));
   }
 
   @Test

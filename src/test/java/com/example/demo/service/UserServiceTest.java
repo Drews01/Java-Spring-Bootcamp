@@ -9,6 +9,7 @@ import com.example.demo.dto.AdminCreateUserRequest;
 import com.example.demo.dto.UserListDTO;
 import com.example.demo.entity.Role;
 import com.example.demo.entity.User;
+import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.RoleRepository;
 import com.example.demo.repository.UserRepository;
 import java.util.Collections;
@@ -68,7 +69,7 @@ public class UserServiceTest {
   @Test
   void getUserById_WhenExists_ShouldReturnUser() {
     when(userRepository.findById(2L)).thenReturn(Optional.of(regularUser));
-    User result = userService.getUserById(2L);
+    UserListDTO result = userService.getUserById(2L);
     assertNotNull(result);
     assertEquals("user", result.getUsername());
   }
@@ -78,7 +79,7 @@ public class UserServiceTest {
     regularUser.setDeleted(true); // Simulate mapped deletion flag if implementation filters it
     // Logic in service: filter(u -> u.getDeleted() == null || !u.getDeleted())
     when(userRepository.findById(2L)).thenReturn(Optional.of(regularUser));
-    assertThrows(RuntimeException.class, () -> userService.getUserById(2L));
+    assertThrows(ResourceNotFoundException.class, () -> userService.getUserById(2L));
   }
 
   @Test

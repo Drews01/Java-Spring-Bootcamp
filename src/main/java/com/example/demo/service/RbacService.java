@@ -9,6 +9,8 @@ import com.example.demo.entity.Menu;
 import com.example.demo.entity.Role;
 import com.example.demo.entity.RoleMenu;
 import com.example.demo.entity.RoleMenuId;
+import com.example.demo.enums.MenuCode;
+import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.MenuRepository;
 import com.example.demo.repository.RoleMenuRepository;
 import com.example.demo.repository.RoleRepository;
@@ -32,105 +34,6 @@ public class RbacService {
   private final MenuRepository menuRepository;
   private final RoleMenuRepository roleMenuRepository;
 
-  // Menu code to category mapping
-  private static final Map<String, String> MENU_CATEGORY_MAP = new HashMap<>();
-
-  static {
-    // Admin Module
-    MENU_CATEGORY_MAP.put("ADMIN_DASHBOARD", "Admin Module");
-    MENU_CATEGORY_MAP.put("ADMIN_SYSTEM_LOGS", "Admin Module");
-
-    // User Management
-    MENU_CATEGORY_MAP.put("USER_LIST", "User Management");
-    MENU_CATEGORY_MAP.put("USER_GET", "User Management");
-    MENU_CATEGORY_MAP.put("USER_CREATE", "User Management");
-    MENU_CATEGORY_MAP.put("USER_UPDATE", "User Management");
-    MENU_CATEGORY_MAP.put("USER_DELETE", "User Management");
-    MENU_CATEGORY_MAP.put("ADMIN_USER_LIST", "User Management");
-    MENU_CATEGORY_MAP.put("ADMIN_USER_CREATE", "User Management");
-    MENU_CATEGORY_MAP.put("ADMIN_USER_STATUS", "User Management");
-    MENU_CATEGORY_MAP.put("ADMIN_USER_ROLES", "User Management");
-
-    // Role Management
-    MENU_CATEGORY_MAP.put("ROLE_LIST", "Role Management");
-    MENU_CATEGORY_MAP.put("ROLE_CREATE", "Role Management");
-    MENU_CATEGORY_MAP.put("ROLE_DELETE", "Role Management");
-
-    // Menu Management
-    MENU_CATEGORY_MAP.put("MENU_LIST", "Menu Management");
-    MENU_CATEGORY_MAP.put("MENU_GET", "Menu Management");
-    MENU_CATEGORY_MAP.put("MENU_CREATE", "Menu Management");
-    MENU_CATEGORY_MAP.put("MENU_UPDATE", "Menu Management");
-    MENU_CATEGORY_MAP.put("MENU_DELETE", "Menu Management");
-
-    // Loan Workflow
-    MENU_CATEGORY_MAP.put("LOAN_SUBMIT", "Loan Workflow");
-    MENU_CATEGORY_MAP.put("LOAN_ACTION", "Loan Workflow");
-    MENU_CATEGORY_MAP.put("LOAN_ALLOWED_ACTIONS", "Loan Workflow");
-    MENU_CATEGORY_MAP.put("LOAN_QUEUE_MARKETING", "Loan Workflow");
-    MENU_CATEGORY_MAP.put("LOAN_QUEUE_BRANCH_MANAGER", "Loan Workflow");
-    MENU_CATEGORY_MAP.put("LOAN_QUEUE_BACK_OFFICE", "Loan Workflow");
-
-    // Loan Application
-    MENU_CATEGORY_MAP.put("LOAN_APP_CREATE", "Loan Application");
-    MENU_CATEGORY_MAP.put("LOAN_APP_GET", "Loan Application");
-    MENU_CATEGORY_MAP.put("LOAN_APP_BY_USER", "Loan Application");
-    MENU_CATEGORY_MAP.put("LOAN_APP_BY_STATUS", "Loan Application");
-    MENU_CATEGORY_MAP.put("LOAN_APP_LIST", "Loan Application");
-    MENU_CATEGORY_MAP.put("LOAN_APP_UPDATE", "Loan Application");
-    MENU_CATEGORY_MAP.put("LOAN_APP_DELETE", "Loan Application");
-
-    // Loan History
-    MENU_CATEGORY_MAP.put("LOAN_HISTORY_CREATE", "Loan History");
-    MENU_CATEGORY_MAP.put("LOAN_HISTORY_GET", "Loan History");
-    MENU_CATEGORY_MAP.put("LOAN_HISTORY_BY_LOAN", "Loan History");
-    MENU_CATEGORY_MAP.put("LOAN_HISTORY_LIST", "Loan History");
-    MENU_CATEGORY_MAP.put("LOAN_HISTORY_DELETE", "Loan History");
-
-    // Product Management
-    MENU_CATEGORY_MAP.put("PRODUCT_CREATE", "Product Management");
-    MENU_CATEGORY_MAP.put("PRODUCT_LIST", "Product Management");
-    MENU_CATEGORY_MAP.put("PRODUCT_ACTIVE", "Product Management");
-    MENU_CATEGORY_MAP.put("PRODUCT_BY_CODE", "Product Management");
-    MENU_CATEGORY_MAP.put("PRODUCT_UPDATE_STATUS", "Product Management");
-    MENU_CATEGORY_MAP.put("PRODUCT_DELETE", "Product Management");
-
-    // User Product
-    MENU_CATEGORY_MAP.put("USER_PRODUCT_CREATE", "User Product");
-    MENU_CATEGORY_MAP.put("USER_PRODUCT_GET", "User Product");
-    MENU_CATEGORY_MAP.put("USER_PRODUCT_BY_USER", "User Product");
-    MENU_CATEGORY_MAP.put("USER_PRODUCT_ACTIVE", "User Product");
-    MENU_CATEGORY_MAP.put("USER_PRODUCT_LIST", "User Product");
-    MENU_CATEGORY_MAP.put("USER_PRODUCT_UPDATE", "User Product");
-    MENU_CATEGORY_MAP.put("USER_PRODUCT_DELETE", "User Product");
-
-    // User Profile
-    MENU_CATEGORY_MAP.put("PROFILE_CREATE", "User Profile");
-    MENU_CATEGORY_MAP.put("PROFILE_ME", "User Profile");
-    MENU_CATEGORY_MAP.put("PROFILE_LIST", "User Profile");
-    MENU_CATEGORY_MAP.put("PROFILE_UPDATE", "User Profile");
-    MENU_CATEGORY_MAP.put("PROFILE_DELETE", "User Profile");
-
-    // Notification
-    MENU_CATEGORY_MAP.put("NOTIFICATION_CREATE", "Notification");
-    MENU_CATEGORY_MAP.put("NOTIFICATION_GET", "Notification");
-    MENU_CATEGORY_MAP.put("NOTIFICATION_BY_USER", "Notification");
-    MENU_CATEGORY_MAP.put("NOTIFICATION_UNREAD", "Notification");
-    MENU_CATEGORY_MAP.put("NOTIFICATION_UNREAD_COUNT", "Notification");
-    MENU_CATEGORY_MAP.put("NOTIFICATION_LIST", "Notification");
-    MENU_CATEGORY_MAP.put("NOTIFICATION_MARK_READ", "Notification");
-    MENU_CATEGORY_MAP.put("NOTIFICATION_DELETE", "Notification");
-
-    // Dashboards (Unified Staff Dashboard)
-    MENU_CATEGORY_MAP.put("STAFF_DASHBOARD", "Dashboards");
-    MENU_CATEGORY_MAP.put("STAFF_QUEUE", "Dashboards");
-
-    // RBAC Management
-    MENU_CATEGORY_MAP.put("RBAC_ROLES_LIST", "RBAC Management");
-    MENU_CATEGORY_MAP.put("RBAC_ROLE_ACCESS", "RBAC Management");
-    MENU_CATEGORY_MAP.put("RBAC_CATEGORIES", "RBAC Management");
-  }
-
   public Page<RoleAccessSummaryDTO> getAllRolesWithSummary(Pageable pageable) {
     Page<Role> rolesPage = roleRepository.findByDeletedFalse(pageable);
     int totalMenus = (int) menuRepository.count();
@@ -146,7 +49,7 @@ public class RbacService {
     Role role =
         roleRepository
             .findById(roleId)
-            .orElseThrow(() -> new RuntimeException("Role not found with id: " + roleId));
+            .orElseThrow(() -> new ResourceNotFoundException("Role", "id", roleId));
 
     List<Menu> allMenus = menuRepository.findAll();
     Set<Long> assignedMenuIds =
@@ -158,7 +61,7 @@ public class RbacService {
     Map<String, List<MenuItemDTO>> groupedMenus = new HashMap<>();
 
     for (Menu menu : allMenus) {
-      String category = MENU_CATEGORY_MAP.getOrDefault(menu.getCode(), "Other");
+      String category = MenuCode.getCategory(menu.getCode());
       MenuItemDTO menuItem =
           new MenuItemDTO(
               menu.getMenuId(),
@@ -185,7 +88,7 @@ public class RbacService {
     Role role =
         roleRepository
             .findById(roleId)
-            .orElseThrow(() -> new RuntimeException("Role not found with id: " + roleId));
+            .orElseThrow(() -> new ResourceNotFoundException("Role", "id", roleId));
 
     // Get current assigned menu IDs
     Set<Long> currentMenuIds =
@@ -229,6 +132,10 @@ public class RbacService {
   }
 
   public List<String> getCategories() {
-    return MENU_CATEGORY_MAP.values().stream().distinct().sorted().collect(Collectors.toList());
+    return java.util.Arrays.stream(MenuCode.values())
+        .map(MenuCode::getCategory)
+        .distinct()
+        .sorted()
+        .collect(Collectors.toList());
   }
 }

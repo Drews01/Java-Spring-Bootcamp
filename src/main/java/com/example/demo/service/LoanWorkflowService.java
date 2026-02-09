@@ -11,6 +11,7 @@ import com.example.demo.entity.User;
 import com.example.demo.enums.LoanAction;
 import com.example.demo.enums.LoanStatus;
 import com.example.demo.exception.BusinessException;
+import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.BranchRepository;
 import com.example.demo.repository.LoanApplicationRepository;
 import com.example.demo.repository.LoanHistoryRepository;
@@ -46,7 +47,7 @@ public class LoanWorkflowService {
     User user =
         userRepository
             .findById(userId)
-            .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+            .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 
     // Get user's current tier product (auto-assigns Bronze if not assigned)
     Product tierProduct = loanEligibilityService.getCurrentTierProduct(userId);
@@ -103,7 +104,7 @@ public class LoanWorkflowService {
         branchRepository
             .findById(request.getBranchId())
             .orElseThrow(
-                () -> new RuntimeException("Branch not found with id: " + request.getBranchId()));
+                () -> new ResourceNotFoundException("Branch", "id", request.getBranchId()));
 
     // Create loan application with SUBMITTED status
     Double interestRate =
@@ -158,13 +159,13 @@ public class LoanWorkflowService {
             .findById(request.getLoanApplicationId())
             .orElseThrow(
                 () ->
-                    new RuntimeException(
-                        "Loan application not found with id: " + request.getLoanApplicationId()));
+                    new ResourceNotFoundException(
+                        "LoanApplication", "id", request.getLoanApplicationId()));
 
     User actorUser =
         userRepository
             .findById(actorUserId)
-            .orElseThrow(() -> new RuntimeException("User not found with id: " + actorUserId));
+            .orElseThrow(() -> new ResourceNotFoundException("User", "id", actorUserId));
 
     String currentStatus = loanApplication.getCurrentStatus();
     String action = request.getAction();
@@ -396,6 +397,7 @@ public class LoanWorkflowService {
     loanNotificationService.notifyLoanStatusChange(loanApplication, fromStatus, toStatus);
   }
 
+  @Transactional(readOnly = true)
   public List<String> getAllowedActions(String currentStatus, Long userId) {
     List<String> allowedActions = new ArrayList<>();
 

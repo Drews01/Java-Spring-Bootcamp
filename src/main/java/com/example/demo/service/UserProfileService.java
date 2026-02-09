@@ -29,7 +29,7 @@ public class UserProfileService {
     User user =
         userRepository
             .findById(userId)
-            .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+            .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 
     UserProfile userProfile =
         UserProfile.builder()
@@ -106,7 +106,7 @@ public class UserProfileService {
   @Transactional
   public UploadImageResponse uploadKtp(Long userId, MultipartFile file) {
     if (file.isEmpty()) {
-      throw new RuntimeException("Failed to store empty file");
+      throw new IllegalArgumentException("Failed to store empty file");
     }
 
     // Validate File

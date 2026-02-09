@@ -1,11 +1,15 @@
 package com.example.demo.service;
 
+import com.example.demo.dto.ProductDTO;
 import com.example.demo.entity.Product;
+import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.ProductRepository;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ProductService {
@@ -15,10 +19,11 @@ public class ProductService {
     this.productRepository = productRepository;
   }
 
+  @Transactional
   @CacheEvict(
       value = {"products", "activeProducts"},
       allEntries = true)
-  public Product createProduct(Product product) {
+  public ProductDTO createProduct(Product product) {
     // Validate unique code (check universally to prevent DB constraint violation)
     if (productRepository.findByCode(product.getCode()).isPresent()) {
       throw new IllegalArgumentException(
@@ -35,38 +40,48 @@ public class ProductService {
       throw new IllegalArgumentException("Minimum tenure must be less than maximum tenure");
     }
 
-    return productRepository.save(product);
+    Product saved = productRepository.save(product);
+    return ProductDTO.fromEntity(saved);
   }
 
   @Cacheable(value = "products")
-  public List<Product> getAllProducts() {
-    return productRepository.findByDeletedFalse();
+  public List<ProductDTO> getAllProducts() {
+    return productRepository.findByDeletedFalse().stream()
+        .map(ProductDTO::fromEntity)
+        .collect(Collectors.toList());
   }
 
   @Cacheable(value = "activeProducts")
-  public List<Product> getActiveProducts() {
-    return productRepository.findByIsActiveTrueAndDeletedFalse();
+  public List<ProductDTO> getActiveProducts() {
+    return productRepository.findByIsActiveTrueAndDeletedFalse().stream()
+        .map(ProductDTO::fromEntity)
+        .collect(Collectors.toList());
   }
 
+  @Transactional
   @CacheEvict(
       value = {"products", "activeProducts", "productByCode"},
       allEntries = true)
-  public Product updateProductStatus(Long id, Boolean isActive) {
+  public ProductDTO updateProductStatus(Long id, Boolean isActive) {
     Product product =
         productRepository
             .findById(id)
-            .orElseThrow(() -> new IllegalArgumentException("Product not found with id: " + id));
+            .orElseThrow(() -> new ResourceNotFoundException("Product", "id", id));
     product.setIsActive(isActive);
-    return productRepository.save(product);
+    Product saved = productRepository.save(product);
+    return ProductDTO.fromEntity(saved);
   }
 
   @Cacheable(value = "productByCode", key = "#code")
-  public Product getProductByCode(String code) {
-    return productRepository
-        .findByCodeAndDeletedFalse(code)
-        .orElseThrow(() -> new IllegalArgumentException("Product not found with code: " + code));
+  public ProductDTO getProductByCode(String code) {
+    Product product =
+        productRepository
+            .findByCodeAndDeletedFalse(code)
+            .orElseThrow(() -> new ResourceNotFoundException("Product", "code", code));
+    return ProductDTO.fromEntity(product);
   }
 
+  @Transactional
   @CacheEvict(
       value = {"products", "activeProducts", "productByCode"},
       allEntries = true)

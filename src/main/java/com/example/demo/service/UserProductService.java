@@ -5,6 +5,7 @@ import com.example.demo.dto.UserTierLimitDTO;
 import com.example.demo.entity.Product;
 import com.example.demo.entity.User;
 import com.example.demo.entity.UserProduct;
+import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.ProductRepository;
 import com.example.demo.repository.UserProductRepository;
 import com.example.demo.repository.UserRepository;
@@ -28,20 +29,19 @@ public class UserProductService {
     User user =
         userRepository
             .findById(dto.getUserId())
-            .orElseThrow(() -> new RuntimeException("User not found with id: " + dto.getUserId()));
+            .orElseThrow(() -> new ResourceNotFoundException("User", "id", dto.getUserId()));
 
     Product product =
         productRepository
             .findById(dto.getProductId())
-            .orElseThrow(
-                () -> new RuntimeException("Product not found with id: " + dto.getProductId()));
+            .orElseThrow(() -> new ResourceNotFoundException("Product", "id", dto.getProductId()));
 
     // Check if already exists
     userProductRepository
         .findByUser_IdAndProduct_Id(dto.getUserId(), dto.getProductId())
         .ifPresent(
             up -> {
-              throw new RuntimeException(
+              throw new IllegalArgumentException(
                   "UserProduct already exists for user "
                       + dto.getUserId()
                       + " and product "
@@ -64,8 +64,7 @@ public class UserProductService {
     UserProduct userProduct =
         userProductRepository
             .findById(userProductId)
-            .orElseThrow(
-                () -> new RuntimeException("UserProduct not found with id: " + userProductId));
+            .orElseThrow(() -> new ResourceNotFoundException("UserProduct", "id", userProductId));
     return convertToDTO(userProduct);
   }
 
@@ -95,8 +94,7 @@ public class UserProductService {
     UserProduct userProduct =
         userProductRepository
             .findById(userProductId)
-            .orElseThrow(
-                () -> new RuntimeException("UserProduct not found with id: " + userProductId));
+            .orElseThrow(() -> new ResourceNotFoundException("UserProduct", "id", userProductId));
 
     userProduct.setStatus(dto.getStatus());
 

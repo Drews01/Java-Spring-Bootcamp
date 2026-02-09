@@ -4,12 +4,14 @@ import com.example.demo.dto.AdminCreateUserRequest;
 import com.example.demo.dto.UserListDTO;
 import com.example.demo.entity.Role;
 import com.example.demo.entity.User;
+import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.RoleRepository;
 import com.example.demo.repository.UserRepository;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -27,34 +29,51 @@ public class UserService {
   private final EmailService emailService;
   private final PasswordResetService passwordResetService;
 
-  public User createUser(User user) {
-    return userRepository.save(user);
+  @Transactional
+  public UserListDTO createUser(User user) {
+    User saved = userRepository.save(user);
+    return UserListDTO.fromUser(saved);
   }
 
-  public List<User> getAllUsers() {
-    return userRepository.findByDeletedFalse();
+  public List<UserListDTO> getAllUsers() {
+    return userRepository.findByDeletedFalse().stream()
+        .map(UserListDTO::fromUser)
+        .collect(Collectors.toList());
   }
 
-  public User getUserById(Long id) {
+  public UserListDTO getUserById(Long id) {
+    User user = findUserById(id);
+    return UserListDTO.fromUser(user);
+  }
+
+  /** Helper method to get User entity (for internal use) */
+  private User findUserById(Long id) {
     return userRepository
         .findById(id)
         .filter(u -> u.getDeleted() == null || !u.getDeleted())
-        .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+        .orElseThrow(() -> new ResourceNotFoundException("User", "id", id));
   }
 
-  public User updateUser(Long id, User userDetails) {
-    User user = getUserById(id);
+  @Transactional
+  public UserListDTO updateUser(Long id, User userDetails) {
+    User user =
+        userRepository
+            .findById(id)
+            .filter(u -> u.getDeleted() == null || !u.getDeleted())
+            .orElseThrow(() -> new ResourceNotFoundException("User", "id", id));
     user.setUsername(userDetails.getUsername());
     user.setEmail(userDetails.getEmail());
     user.setIsActive(userDetails.getIsActive());
     if (userDetails.getRoles() != null) {
       user.setRoles(userDetails.getRoles());
     }
-    return userRepository.save(user);
+    User saved = userRepository.save(user);
+    return UserListDTO.fromUser(saved);
   }
 
+  @Transactional
   public void deleteUser(Long id) {
-    User user = getUserById(id);
+    User user = findUserById(id);
     user.setDeleted(true);
     user.setIsActive(false);
     userRepository.save(user);
@@ -69,7 +88,7 @@ public class UserService {
   /** Admin: Set user active/inactive status */
   @Transactional
   public UserListDTO setUserActiveStatus(Long userId, Boolean isActive, Long currentAdminId) {
-    User user = getUserById(userId);
+    User user = findUserById(userId);
 
     // IDOR Protection: Prevent self-deactivation
     if (userId.equals(currentAdminId) && Boolean.FALSE.equals(isActive)) {
@@ -93,7 +112,7 @@ public class UserService {
   /** Admin: Update user's roles */
   @Transactional
   public UserListDTO updateUserRoles(Long userId, Set<String> roleNames, Long currentAdminId) {
-    User user = getUserById(userId);
+    User user = findUserById(userId);
 
     // IDOR Protection: Prevent self-role-removal of ADMIN role
     boolean currentUserIsTarget = userId.equals(currentAdminId);
@@ -118,7 +137,7 @@ public class UserService {
       Role role =
           roleRepository
               .findByName(roleName.toUpperCase())
-              .orElseThrow(() -> new RuntimeException("Role not found: " + roleName));
+              .orElseThrow(() -> new ResourceNotFoundException("Role", "name", roleName));
       roles.add(role);
     }
 
@@ -160,7 +179,7 @@ public class UserService {
         Role role =
             roleRepository
                 .findByName(roleName.toUpperCase())
-                .orElseThrow(() -> new RuntimeException("Role not found: " + roleName));
+                .orElseThrow(() -> new ResourceNotFoundException("Role", "name", roleName));
         roles.add(role);
       }
     } else {
@@ -168,7 +187,7 @@ public class UserService {
       Role userRole =
           roleRepository
               .findByName("USER")
-              .orElseThrow(() -> new RuntimeException("Default USER role not found"));
+              .orElseThrow(() -> new ResourceNotFoundException("Default USER role not found"));
       roles.add(userRole);
     }
 

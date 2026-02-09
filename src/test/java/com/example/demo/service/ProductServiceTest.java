@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import com.example.demo.config.TestConfig;
+import com.example.demo.dto.ProductDTO;
 import com.example.demo.entity.Product;
 import com.example.demo.repository.ProductRepository;
 import java.util.Collections;
@@ -51,7 +52,7 @@ public class ProductServiceTest {
     when(productRepository.save(any(Product.class))).thenReturn(product);
 
     // Act
-    Product result = productService.createProduct(product);
+    ProductDTO result = productService.createProduct(product);
 
     // Assert
     assertNotNull(result);
@@ -95,7 +96,7 @@ public class ProductServiceTest {
     when(productRepository.findByDeletedFalse()).thenReturn(Collections.singletonList(product));
 
     // Act
-    List<Product> result = productService.getAllProducts();
+    List<ProductDTO> result = productService.getAllProducts();
 
     // Assert
     assertEquals(1, result.size());
@@ -108,7 +109,7 @@ public class ProductServiceTest {
         .thenReturn(Collections.singletonList(product));
 
     // Act
-    List<Product> result = productService.getActiveProducts();
+    List<ProductDTO> result = productService.getActiveProducts();
 
     // Assert
     assertEquals(1, result.size());
@@ -121,7 +122,7 @@ public class ProductServiceTest {
     when(productRepository.save(any(Product.class))).thenAnswer(i -> i.getArguments()[0]);
 
     // Act
-    Product result = productService.updateProductStatus(1L, false);
+    ProductDTO result = productService.updateProductStatus(1L, false);
 
     // Assert
     assertFalse(result.getIsActive());

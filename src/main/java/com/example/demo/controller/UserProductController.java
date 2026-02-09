@@ -5,6 +5,7 @@ import com.example.demo.base.ResponseUtil;
 import com.example.demo.dto.UserProductDTO;
 import com.example.demo.dto.UserTierLimitDTO;
 import com.example.demo.entity.User;
+import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.UserRepository;
 import com.example.demo.service.UserProductService;
 import java.util.List;
@@ -79,7 +80,7 @@ public class UserProductController {
     User user =
         userRepository
             .findByUsername(username)
-            .orElseThrow(() -> new RuntimeException("User not found: " + username));
+            .orElseThrow(() -> new ResourceNotFoundException("User", "username", username));
 
     UserTierLimitDTO tierInfo = userProductService.getCurrentUserTierAndLimits(user.getId());
 

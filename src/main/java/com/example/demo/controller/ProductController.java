@@ -2,6 +2,7 @@ package com.example.demo.controller;
 
 import com.example.demo.base.ApiResponse;
 import com.example.demo.base.ResponseUtil;
+import com.example.demo.dto.ProductDTO;
 import com.example.demo.entity.Product;
 import com.example.demo.service.ProductService;
 import java.util.List;
@@ -20,33 +21,33 @@ public class ProductController {
   }
 
   @PostMapping
-  public ResponseEntity<ApiResponse<Product>> createProduct(@RequestBody Product product) {
-    Product createdProduct = productService.createProduct(product);
+  public ResponseEntity<ApiResponse<ProductDTO>> createProduct(@RequestBody Product product) {
+    ProductDTO createdProduct = productService.createProduct(product);
     return ResponseUtil.created(createdProduct, "Product created successfully");
   }
 
   @GetMapping
-  public ResponseEntity<ApiResponse<List<Product>>> getAllProducts() {
-    List<Product> products = productService.getAllProducts();
+  public ResponseEntity<ApiResponse<List<ProductDTO>>> getAllProducts() {
+    List<ProductDTO> products = productService.getAllProducts();
     return ResponseUtil.ok(products, "Products retrieved successfully");
   }
 
   @GetMapping("/active")
-  public ResponseEntity<ApiResponse<List<Product>>> getActiveProducts() {
-    List<Product> products = productService.getActiveProducts();
+  public ResponseEntity<ApiResponse<List<ProductDTO>>> getActiveProducts() {
+    List<ProductDTO> products = productService.getActiveProducts();
     return ResponseUtil.ok(products, "Active products retrieved successfully");
   }
 
   @GetMapping("/code/{code}")
-  public ResponseEntity<ApiResponse<Product>> getProductByCode(@PathVariable String code) {
-    Product product = productService.getProductByCode(code);
+  public ResponseEntity<ApiResponse<ProductDTO>> getProductByCode(@PathVariable String code) {
+    ProductDTO product = productService.getProductByCode(code);
     return ResponseUtil.ok(product, "Product retrieved successfully");
   }
 
   @PatchMapping("/{id}/status")
-  public ResponseEntity<ApiResponse<Product>> updateProductStatus(
+  public ResponseEntity<ApiResponse<ProductDTO>> updateProductStatus(
       @PathVariable Long id, @RequestParam Boolean isActive) {
-    Product updatedProduct = productService.updateProductStatus(id, isActive);
+    ProductDTO updatedProduct = productService.updateProductStatus(id, isActive);
     return ResponseUtil.ok(updatedProduct, "Product status updated successfully");
   }
 

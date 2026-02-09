@@ -5,6 +5,7 @@ import com.example.demo.entity.Product;
 import com.example.demo.entity.User;
 import com.example.demo.entity.UserProduct;
 import com.example.demo.enums.LoanStatus;
+import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.LoanApplicationRepository;
 import com.example.demo.repository.ProductRepository;
 import com.example.demo.repository.UserProductRepository;
@@ -93,7 +94,7 @@ public class LoanEligibilityService {
     User user =
         userRepository
             .findById(userId)
-            .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+            .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 
     // Get Bronze product (tier order 1)
     Optional<Product> bronzeProduct = productRepository.findByTierOrderAndDeletedFalse(1);

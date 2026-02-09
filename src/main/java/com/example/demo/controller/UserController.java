@@ -29,27 +29,27 @@ public class UserController {
   private final UserService userService;
 
   @GetMapping
-  public ResponseEntity<ApiResponse<List<User>>> getAllUsers() {
-    List<User> users = userService.getAllUsers();
+  public ResponseEntity<ApiResponse<List<UserListDTO>>> getAllUsers() {
+    List<UserListDTO> users = userService.getAllUsers();
     return ResponseUtil.ok(users, "Users fetched successfully");
   }
 
   @GetMapping("/{id}")
-  public ResponseEntity<ApiResponse<User>> getUserById(@PathVariable Long id) {
-    User user = userService.getUserById(id);
+  public ResponseEntity<ApiResponse<UserListDTO>> getUserById(@PathVariable Long id) {
+    UserListDTO user = userService.getUserById(id);
     return ResponseUtil.ok(user, "User fetched successfully");
   }
 
   @PostMapping
-  public ResponseEntity<ApiResponse<User>> createUser(@RequestBody User user) {
-    User createdUser = userService.createUser(user);
+  public ResponseEntity<ApiResponse<UserListDTO>> createUser(@RequestBody User user) {
+    UserListDTO createdUser = userService.createUser(user);
     return ResponseUtil.created(createdUser, "User created successfully");
   }
 
   @PutMapping("/{id}")
-  public ResponseEntity<ApiResponse<User>> updateUser(
+  public ResponseEntity<ApiResponse<UserListDTO>> updateUser(
       @PathVariable Long id, @RequestBody User user) {
-    User updatedUser = userService.updateUser(id, user);
+    UserListDTO updatedUser = userService.updateUser(id, user);
     return ResponseUtil.ok(updatedUser, "User updated successfully");
   }
 
@@ -105,6 +105,6 @@ public class UserController {
       CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
       return userDetails.getId();
     }
-    throw new RuntimeException("Unable to get current user ID from security context");
+    throw new IllegalStateException("Unable to get current user ID from security context");
   }
 }

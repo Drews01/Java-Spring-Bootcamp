@@ -2,6 +2,7 @@ package com.example.demo.controller;
 
 import com.example.demo.base.ApiResponse;
 import com.example.demo.base.ResponseUtil;
+import com.example.demo.dto.RoleDTO;
 import com.example.demo.entity.Role;
 import com.example.demo.service.RoleService;
 import java.util.List;
@@ -17,14 +18,14 @@ public class RoleController {
   private final RoleService roleService;
 
   @GetMapping
-  public ResponseEntity<ApiResponse<List<Role>>> getAllRoles() {
-    List<Role> roles = roleService.getAllRoles();
+  public ResponseEntity<ApiResponse<List<RoleDTO>>> getAllRoles() {
+    List<RoleDTO> roles = roleService.getAllRoles();
     return ResponseUtil.ok(roles, "Roles retrieved successfully");
   }
 
   @PostMapping
-  public ResponseEntity<ApiResponse<Role>> createRole(@RequestBody Role role) {
-    Role createdRole = roleService.createRole(role);
+  public ResponseEntity<ApiResponse<RoleDTO>> createRole(@RequestBody Role role) {
+    RoleDTO createdRole = roleService.createRole(role);
     return ResponseUtil.created(createdRole, "Role created successfully");
   }
 

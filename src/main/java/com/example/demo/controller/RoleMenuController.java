@@ -2,7 +2,7 @@ package com.example.demo.controller;
 
 import com.example.demo.base.ApiResponse;
 import com.example.demo.base.ResponseUtil;
-import com.example.demo.entity.RoleMenu;
+import com.example.demo.dto.RoleMenuDTO;
 import com.example.demo.service.RoleMenuService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -17,21 +17,23 @@ public class RoleMenuController {
   private final RoleMenuService roleMenuService;
 
   @PostMapping
-  public ResponseEntity<ApiResponse<RoleMenu>> assignMenuToRole(
+  public ResponseEntity<ApiResponse<RoleMenuDTO>> assignMenuToRole(
       @RequestParam Long roleId, @RequestParam Long menuId) {
-    RoleMenu created = roleMenuService.assignMenuToRole(roleId, menuId);
+    RoleMenuDTO created = roleMenuService.assignMenuToRole(roleId, menuId);
     return ResponseUtil.created(created, "Menu assigned to role successfully");
   }
 
   @GetMapping("/role/{roleId}")
-  public ResponseEntity<ApiResponse<List<RoleMenu>>> getMenusByRoleId(@PathVariable Long roleId) {
-    List<RoleMenu> roleMenus = roleMenuService.getMenusByRoleId(roleId);
+  public ResponseEntity<ApiResponse<List<RoleMenuDTO>>> getMenusByRoleId(
+      @PathVariable Long roleId) {
+    List<RoleMenuDTO> roleMenus = roleMenuService.getMenusByRoleId(roleId);
     return ResponseUtil.ok(roleMenus, "Menus retrieved successfully");
   }
 
   @GetMapping("/menu/{menuId}")
-  public ResponseEntity<ApiResponse<List<RoleMenu>>> getRolesByMenuId(@PathVariable Long menuId) {
-    List<RoleMenu> roleMenus = roleMenuService.getRolesByMenuId(menuId);
+  public ResponseEntity<ApiResponse<List<RoleMenuDTO>>> getRolesByMenuId(
+      @PathVariable Long menuId) {
+    List<RoleMenuDTO> roleMenus = roleMenuService.getRolesByMenuId(menuId);
     return ResponseUtil.ok(roleMenus, "Roles retrieved successfully");
   }
 

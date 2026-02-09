@@ -4,6 +4,7 @@ import com.example.demo.dto.NotificationDTO;
 import com.example.demo.entity.LoanApplication;
 import com.example.demo.entity.Notification;
 import com.example.demo.entity.User;
+import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.LoanApplicationRepository;
 import com.example.demo.repository.NotificationRepository;
 import com.example.demo.repository.UserRepository;
@@ -26,7 +27,7 @@ public class NotificationService {
     User user =
         userRepository
             .findById(dto.getUserId())
-            .orElseThrow(() -> new RuntimeException("User not found with id: " + dto.getUserId()));
+            .orElseThrow(() -> new ResourceNotFoundException("User", "id", dto.getUserId()));
 
     Notification.NotificationBuilder builder =
         Notification.builder()
@@ -42,9 +43,8 @@ public class NotificationService {
               .findById(dto.getRelatedLoanApplicationId())
               .orElseThrow(
                   () ->
-                      new RuntimeException(
-                          "LoanApplication not found with id: "
-                              + dto.getRelatedLoanApplicationId()));
+                      new ResourceNotFoundException(
+                          "LoanApplication", "id", dto.getRelatedLoanApplicationId()));
       builder.relatedLoanApplication(loanApplication);
     }
 
@@ -58,8 +58,7 @@ public class NotificationService {
     Notification notification =
         notificationRepository
             .findById(notificationId)
-            .orElseThrow(
-                () -> new RuntimeException("Notification not found with id: " + notificationId));
+            .orElseThrow(() -> new ResourceNotFoundException("Notification", "id", notificationId));
     return convertToDTO(notification);
   }
 
@@ -94,8 +93,7 @@ public class NotificationService {
     Notification notification =
         notificationRepository
             .findById(notificationId)
-            .orElseThrow(
-                () -> new RuntimeException("Notification not found with id: " + notificationId));
+            .orElseThrow(() -> new ResourceNotFoundException("Notification", "id", notificationId));
 
     notification.setIsRead(true);
     Notification updated = notificationRepository.save(notification);

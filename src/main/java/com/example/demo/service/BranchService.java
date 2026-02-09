@@ -6,6 +6,7 @@ import com.example.demo.dto.UpdateBranchRequest;
 import com.example.demo.dto.UserBranchDTO;
 import com.example.demo.entity.Branch;
 import com.example.demo.entity.User;
+import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.BranchRepository;
 import com.example.demo.repository.UserRepository;
 import java.util.List;
@@ -40,7 +41,7 @@ public class BranchService {
     Branch branch =
         branchRepository
             .findById(id)
-            .orElseThrow(() -> new RuntimeException("Branch not found with id: " + id));
+            .orElseThrow(() -> new ResourceNotFoundException("Branch", "id", id));
     return BranchDTO.fromEntity(branch);
   }
 
@@ -75,7 +76,7 @@ public class BranchService {
     Branch branch =
         branchRepository
             .findById(id)
-            .orElseThrow(() -> new RuntimeException("Branch not found with id: " + id));
+            .orElseThrow(() -> new ResourceNotFoundException("Branch", "id", id));
 
     // Update name if provided and different
     if (request.name() != null && !request.name().equals(branch.getName())) {
@@ -105,7 +106,7 @@ public class BranchService {
     Branch branch =
         branchRepository
             .findById(id)
-            .orElseThrow(() -> new RuntimeException("Branch not found with id: " + id));
+            .orElseThrow(() -> new ResourceNotFoundException("Branch", "id", id));
 
     branch.setIsActive(false);
     branchRepository.save(branch);
@@ -117,7 +118,7 @@ public class BranchService {
     User user =
         userRepository
             .findById(userId)
-            .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+            .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 
     Branch branch =
         branchRepository
@@ -148,7 +149,7 @@ public class BranchService {
     User user =
         userRepository
             .findById(userId)
-            .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+            .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 
     user.setBranch(null);
     User savedUser = userRepository.save(user);

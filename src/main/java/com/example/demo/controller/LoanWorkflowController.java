@@ -13,6 +13,7 @@ import com.example.demo.entity.LoanApplication;
 import com.example.demo.entity.LoanHistory;
 import com.example.demo.entity.User;
 import com.example.demo.enums.LoanStatus;
+import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.LoanApplicationRepository;
 import com.example.demo.repository.LoanHistoryRepository;
 import com.example.demo.repository.UserRepository;
@@ -141,8 +142,7 @@ public class LoanWorkflowController {
     LoanApplication loanApplication =
         loanApplicationRepository
             .findById(loanId)
-            .orElseThrow(
-                () -> new RuntimeException("Loan application not found with id: " + loanId));
+            .orElseThrow(() -> new ResourceNotFoundException("LoanApplication", "id", loanId));
 
     Long userId = getCurrentUserId();
     List<String> allowedActions =
@@ -157,7 +157,7 @@ public class LoanWorkflowController {
     User currentUser =
         userRepository
             .findById(currentUserId)
-            .orElseThrow(() -> new RuntimeException("User not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("User", "id", getCurrentUserId()));
 
     Page<LoanApplication> loans;
 

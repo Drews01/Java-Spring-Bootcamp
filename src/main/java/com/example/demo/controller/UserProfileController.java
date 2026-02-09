@@ -5,6 +5,7 @@ import com.example.demo.base.ResponseUtil;
 import com.example.demo.dto.UploadImageResponse;
 import com.example.demo.dto.UserProfileDTO;
 import com.example.demo.entity.User;
+import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.UserRepository;
 import com.example.demo.security.CustomUserDetails;
 import com.example.demo.service.UserProfileService;
@@ -121,6 +122,6 @@ public class UserProfileController {
     return userRepository.findAll().stream()
         .findFirst()
         .map(User::getId)
-        .orElseThrow(() -> new RuntimeException("No users found"));
+        .orElseThrow(() -> new ResourceNotFoundException("No users found in the system"));
   }
 }

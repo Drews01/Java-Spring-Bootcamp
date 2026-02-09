@@ -6,6 +6,7 @@ import com.example.demo.entity.LoanApplication;
 import com.example.demo.entity.LoanHistory;
 import com.example.demo.entity.User;
 import com.example.demo.enums.LoanStatus;
+import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.LoanApplicationRepository;
 import com.example.demo.repository.LoanHistoryRepository;
 import com.example.demo.repository.UserRepository;
@@ -32,14 +33,13 @@ public class LoanHistoryService {
             .findById(dto.getLoanApplicationId())
             .orElseThrow(
                 () ->
-                    new RuntimeException(
-                        "LoanApplication not found with id: " + dto.getLoanApplicationId()));
+                    new ResourceNotFoundException(
+                        "LoanApplication", "id", dto.getLoanApplicationId()));
 
     User actorUser =
         userRepository
             .findById(dto.getActorUserId())
-            .orElseThrow(
-                () -> new RuntimeException("User not found with id: " + dto.getActorUserId()));
+            .orElseThrow(() -> new ResourceNotFoundException("User", "id", dto.getActorUserId()));
 
     LoanHistory loanHistory =
         LoanHistory.builder()
@@ -60,8 +60,7 @@ public class LoanHistoryService {
     LoanHistory loanHistory =
         loanHistoryRepository
             .findById(loanHistoryId)
-            .orElseThrow(
-                () -> new RuntimeException("LoanHistory not found with id: " + loanHistoryId));
+            .orElseThrow(() -> new ResourceNotFoundException("LoanHistory", "id", loanHistoryId));
     return convertToDTO(loanHistory);
   }
 
@@ -92,9 +91,7 @@ public class LoanHistoryService {
         loanApplicationRepository
             .findById(loanApplicationId)
             .orElseThrow(
-                () ->
-                    new RuntimeException(
-                        "LoanApplication not found with id: " + loanApplicationId));
+                () -> new ResourceNotFoundException("LoanApplication", "id", loanApplicationId));
 
     List<LoanHistory> historyList =
         loanHistoryRepository.findByLoanApplication_LoanApplicationIdOrderByCreatedAtAsc(
