@@ -81,7 +81,7 @@ public class AuthController {
       response.addHeader(HttpHeaders.SET_COOKIE, jwtCookie.toString());
       return ResponseUtil.ok(authResponse, "Google Login successful");
     } catch (Exception e) {
-      e.printStackTrace(); // Simple logging for debugging
+      log.error("Google login failed: {}", e.getMessage(), e);
       return ResponseUtil.error(
           org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR,
           "Google Login Error: " + e.getMessage());

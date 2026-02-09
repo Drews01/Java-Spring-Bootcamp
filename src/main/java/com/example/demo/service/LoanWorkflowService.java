@@ -473,7 +473,6 @@ public class LoanWorkflowService {
         .interestRateApplied(loanApplication.getInterestRateApplied())
         .totalAmountToPay(loanApplication.getTotalAmountToPay())
         .currentStatus(loanApplication.getCurrentStatus())
-        .currentStatus(loanApplication.getCurrentStatus())
         .createdAt(loanApplication.getCreatedAt())
         .updatedAt(loanApplication.getUpdatedAt())
         .latitude(loanApplication.getLatitude())
