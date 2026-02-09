@@ -30,7 +30,34 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Authentication Service Handles user registration and login logic */
+/**
+ * Authentication Service.
+ *
+ * <p>Handles user authentication operations including:
+ *
+ * <ul>
+ *   <li>User registration with email and password
+ *   <li>Local and Google OAuth 2.0 authentication
+ *   <li>JWT token generation and refresh
+ *   <li>Password reset via email
+ *   <li>Session management and logout
+ * </ul>
+ *
+ * <p>Security features:
+ *
+ * <ul>
+ *   <li>Passwords are encrypted using BCrypt
+ *   <li>JWT tokens stored in HttpOnly cookies
+ *   <li>Refresh token rotation for enhanced security
+ *   <li>Token blacklisting on logout
+ * </ul>
+ *
+ * @author Java Spring Bootcamp
+ * @version 1.0
+ * @see JwtService
+ * @see RefreshTokenService
+ * @see TokenBlacklistService
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -51,7 +78,23 @@ public class AuthService {
   @Value("${app.google.client-id:}")
   private String googleClientId;
 
-  /** Register a new user */
+  /**
+   * Registers a new user in the system.
+   *
+   * <p>This method performs the following operations:
+   *
+   * <ol>
+   *   <li>Validates that username and email are unique
+   *   <li>Creates user with BCrypt-encrypted password
+   *   <li>Assigns default USER role
+   *   <li>Creates an empty UserProfile for the new user
+   *   <li>Generates JWT access and refresh tokens
+   * </ol>
+   *
+   * @param request the registration request containing username, email, and password
+   * @return AuthResponse containing JWT tokens and user information
+   * @throws IllegalArgumentException if username or email already exists
+   */
   @Transactional
   public AuthResponse register(RegisterRequest request) {
     // Check if username already exists
@@ -105,7 +148,21 @@ public class AuthService {
     return buildAuthResponse(token, refreshToken, savedUser);
   }
 
-  /** Login user */
+  /**
+   * Authenticates a user with username/email and password.
+   *
+   * <p>On successful authentication:
+   *
+   * <ul>
+   *   <li>Generates new JWT access and refresh tokens
+   *   <li>Stores refresh token in Redis for validation
+   *   <li>Optionally saves FCM device token for push notifications
+   * </ul>
+   *
+   * @param request the login request containing credentials and optional FCM token
+   * @return AuthResponse containing JWT tokens and user information
+   * @throws org.springframework.security.core.AuthenticationException if credentials are invalid
+   */
   public AuthResponse login(AuthRequest request) {
     // Authenticate user
     log.info("Login attempt for: {}", request.usernameOrEmail());

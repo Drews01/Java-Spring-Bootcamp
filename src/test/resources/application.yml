@@ -50,3 +50,7 @@ app:
   # Mail configuration
   mail:
     from: test@example.com
+  
+  # Disable rate limiting for tests
+  rate-limit:
+    enabled: false

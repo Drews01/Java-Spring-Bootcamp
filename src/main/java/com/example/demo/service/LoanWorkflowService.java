@@ -25,6 +25,32 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Loan Workflow Service.
+ *
+ * <p>Manages the complete loan application lifecycle and state transitions. This service handles:
+ *
+ * <ul>
+ *   <li>Loan submission with validation
+ *   <li>Workflow actions (COMMENT, FORWARD_TO_MANAGER, APPROVE, REJECT, DISBURSE)
+ *   <li>Status transitions based on role permissions
+ *   <li>Notification triggering on status changes
+ * </ul>
+ *
+ * <p>Workflow states:
+ *
+ * <ul>
+ *   <li>SUBMITTED → IN_REVIEW (Marketing reviews)
+ *   <li>IN_REVIEW → WAITING_APPROVAL (forwarded to Branch Manager)
+ *   <li>WAITING_APPROVAL → APPROVED_WAITING_DISBURSEMENT or REJECTED
+ *   <li>APPROVED_WAITING_DISBURSEMENT → DISBURSED (Back Office disburses)
+ * </ul>
+ *
+ * @author Java Spring Bootcamp
+ * @version 1.0
+ * @see LoanEligibilityService
+ * @see LoanNotificationService
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j

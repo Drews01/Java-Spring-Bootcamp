@@ -18,6 +18,30 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Loan Eligibility Service.
+ *
+ * <p>Manages credit limits, tier products, and loan eligibility. This service handles:
+ *
+ * <ul>
+ *   <li>Credit limit checking and validation
+ *   <li>Tier product assignment (Bronze, Silver, Gold, Platinum)
+ *   <li>Used amount tracking for credit utilization
+ *   <li>Automatic tier upgrades based on payment history
+ * </ul>
+ *
+ * <p>Tier upgrade rules:
+ *
+ * <ul>
+ *   <li>Bronze → Silver: After total paid amount reaches upgrade threshold
+ *   <li>Silver → Gold: After total paid amount reaches upgrade threshold
+ *   <li>Gold → Platinum: After total paid amount reaches upgrade threshold
+ * </ul>
+ *
+ * @author Java Spring Bootcamp
+ * @version 1.0
+ * @see LoanWorkflowService
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j

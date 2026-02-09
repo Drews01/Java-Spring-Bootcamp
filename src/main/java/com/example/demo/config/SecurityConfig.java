@@ -4,6 +4,7 @@ import com.example.demo.security.CustomAccessDeniedHandler;
 import com.example.demo.security.CustomAuthenticationEntryPoint;
 import com.example.demo.security.DynamicAuthorizationManager;
 import com.example.demo.security.JwtCookieAuthenticationFilter;
+import com.example.demo.security.RateLimitFilter;
 import com.example.demo.security.SpaCsrfTokenRequestHandler;
 import java.util.Arrays;
 import java.util.List;
@@ -38,6 +39,7 @@ public class SecurityConfig {
 
   private final JwtCookieAuthenticationFilter jwtCookieAuthenticationFilter;
   private final DynamicAuthorizationManager dynamicAuthorizationManager;
+  private final RateLimitFilter rateLimitFilter;
 
   @Value("${app.cors.allowed-origins:http://localhost:4200}")
   private String allowedOrigins;
@@ -87,6 +89,8 @@ public class SecurityConfig {
                 exception
                     .authenticationEntryPoint(new CustomAuthenticationEntryPoint())
                     .accessDeniedHandler(new CustomAccessDeniedHandler()))
+        // Rate Limit Filter (before JWT to catch abuse early)
+        .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
         // JWT Cookie Authentication Filter
         .addFilterBefore(jwtCookieAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

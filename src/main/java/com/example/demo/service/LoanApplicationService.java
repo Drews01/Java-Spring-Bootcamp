@@ -14,6 +14,24 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Loan Application Service.
+ *
+ * <p>Provides CRUD operations for loan applications. This service handles:
+ *
+ * <ul>
+ *   <li>Creating new loan applications
+ *   <li>Retrieving loan applications by ID, user, or status
+ *   <li>Updating loan application details
+ *   <li>Deleting loan applications
+ * </ul>
+ *
+ * <p>Note: For loan submission workflow operations, use {@link LoanWorkflowService} instead.
+ *
+ * @author Java Spring Bootcamp
+ * @version 1.0
+ * @see LoanWorkflowService
+ */
 @Service
 @RequiredArgsConstructor
 public class LoanApplicationService {

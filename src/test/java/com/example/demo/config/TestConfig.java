@@ -60,6 +60,12 @@ public class TestConfig {
     return mock(StorageService.class);
   }
 
+  @Bean
+  @Primary
+  public com.example.demo.service.RateLimitingService rateLimitingService() {
+    return mock(com.example.demo.service.RateLimitingService.class);
+  }
+
   static class StubTokenBlacklistService extends com.example.demo.service.TokenBlacklistService {
     private final java.util.Set<String> blacklisted = new java.util.HashSet<>();
 
