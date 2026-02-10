@@ -193,4 +193,69 @@
 		</plugins>
 	</build>
 
+	<!-- PIT Mutation Testing Profile -->
+	<profiles>
+		<profile>
+			<id>mutation-testing</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.pitest</groupId>
+						<artifactId>pitest-maven</artifactId>
+						<version>1.15.8</version>
+						<dependencies>
+							<dependency>
+								<groupId>org.pitest</groupId>
+								<artifactId>pitest-junit5-plugin</artifactId>
+								<version>1.2.1</version>
+							</dependency>
+						</dependencies>
+						<configuration>
+							<targetClasses>
+								<param>com.example.demo.service.*</param>
+								<param>com.example.demo.controller.*</param>
+								<param>com.example.demo.security.*</param>
+							</targetClasses>
+							<targetTests>
+								<param>com.example.demo.service.*Test</param>
+								<param>com.example.demo.controller.*Test</param>
+								<param>com.example.demo.security.*Test</param>
+							</targetTests>
+							<excludedClasses>
+								<param>com.example.demo.entity.*</param>
+								<param>com.example.demo.dto.*</param>
+								<param>com.example.demo.config.*</param>
+								<param>com.example.demo.repository.*</param>
+								<param>com.example.demo.exception.*</param>
+								<param>com.example.demo.base.*</param>
+							</excludedClasses>
+							<mutators>
+								<mutator>CONDITIONALS_BOUNDARY</mutator>
+								<mutator>INCREMENTS</mutator>
+								<mutator>INVERT_NEGS</mutator>
+								<mutator>MATH</mutator>
+								<mutator>NEGATE_CONDITIONALS</mutator>
+								<mutator>RETURN_VALS</mutator>
+								<mutator>VOID_METHOD_CALLS</mutator>
+								<mutator>EMPTY_RETURNS</mutator>
+								<mutator>FALSE_RETURNS</mutator>
+								<mutator>TRUE_RETURNS</mutator>
+								<mutator>NULL_RETURNS</mutator>
+								<mutator>PRIMITIVE_RETURNS</mutator>
+							</mutators>
+							<outputFormats>
+								<outputFormat>HTML</outputFormat>
+								<outputFormat>XML</outputFormat>
+							</outputFormats>
+							<reportsDirectory>${project.build.directory}/pit-reports</reportsDirectory>
+							<timestampedReports>false</timestampedReports>
+							<failWhenNoMutations>false</failWhenNoMutations>
+							<verbose>true</verbose>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
+
 </project>
