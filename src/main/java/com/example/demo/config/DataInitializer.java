@@ -279,6 +279,9 @@ public class DataInitializer implements CommandLineRunner {
     mapRoleToMenu(userRole, userProductByUser);
     mapRoleToMenu(userRole, userProductActiveByUser);
     mapRoleToMenu(userRole, userProductMyTier);
+    mapRoleToMenu(userRole, fcmRegister);
+    mapRoleToMenu(userRole, fcmUnregister);
+    mapRoleToMenu(userRole, fcmTest);
 
     // -------------------- MARKETING ROLE --------------------
     mapRoleToMenu(marketingRole, loanQueueMarketing);

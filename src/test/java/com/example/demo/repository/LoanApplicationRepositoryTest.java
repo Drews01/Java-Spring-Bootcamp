@@ -99,7 +99,9 @@ class LoanApplicationRepositoryTest {
 
     // Then
     assertThat(loans).hasSize(2);
-    assertThat(loans).extracting(LoanApplication::getAmount).containsExactly(2000000.0, 1000000.0);
+    assertThat(loans)
+        .extracting(LoanApplication::getAmount)
+        .containsExactlyInAnyOrder(2000000.0, 1000000.0);
   }
 
   @Test

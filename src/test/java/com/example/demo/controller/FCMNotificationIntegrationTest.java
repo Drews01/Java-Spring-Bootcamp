@@ -4,7 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
@@ -44,10 +46,8 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Integration tests for FCM (Firebase Cloud Messaging) notification flows
- * including: - Device token
- * registration - Device token unregistration - Push notification sending - Test
- * notification
+ * Integration tests for FCM (Firebase Cloud Messaging) notification flows including: - Device token
+ * registration - Device token unregistration - Push notification sending - Test notification
  * endpoint
  */
 @SpringBootTest
@@ -56,26 +56,19 @@ import org.springframework.transaction.annotation.Transactional;
 @Import(TestConfig.class)
 public class FCMNotificationIntegrationTest {
 
-  @Autowired
-  private MockMvc mockMvc;
+  @Autowired private MockMvc mockMvc;
 
-  @Autowired
-  private ObjectMapper objectMapper;
+  @Autowired private ObjectMapper objectMapper;
 
-  @Autowired
-  private UserRepository userRepository;
+  @Autowired private UserRepository userRepository;
 
-  @Autowired
-  private RoleRepository roleRepository;
+  @Autowired private RoleRepository roleRepository;
 
-  @Autowired
-  private UserDeviceRepository userDeviceRepository;
+  @Autowired private UserDeviceRepository userDeviceRepository;
 
-  @Autowired
-  private FCMService fcmService;
+  @Autowired private FCMService fcmService;
 
-  @Autowired
-  private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+  @Autowired private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
   private static final String TEST_USER = "testfcmuser";
   private static final String TEST_PASSWORD = "testpass123";
@@ -89,6 +82,57 @@ public class FCMNotificationIntegrationTest {
   void setUp() {
     // Reset the FCMService mock before each test
     reset(fcmService);
+
+    // Configure mock FCMService to delegate saveDeviceToken to real
+    // UserDeviceRepository
+    doAnswer(
+            invocation -> {
+              User user = invocation.getArgument(0);
+              String fcmToken = invocation.getArgument(1);
+              String deviceName = invocation.getArgument(2);
+              String platform = invocation.getArgument(3);
+              if (fcmToken == null || fcmToken.isBlank()) return null;
+              var existingDevice = userDeviceRepository.findByFcmToken(fcmToken);
+              if (existingDevice.isPresent()) {
+                var device = existingDevice.get();
+                device.setUser(user);
+                device.setDeviceName(deviceName);
+                device.setPlatform(platform);
+                device.setIsActive(true);
+                userDeviceRepository.save(device);
+              } else {
+                userDeviceRepository.save(
+                    UserDevice.builder()
+                        .user(user)
+                        .fcmToken(fcmToken)
+                        .deviceName(deviceName)
+                        .platform(platform)
+                        .isActive(true)
+                        .build());
+              }
+              return null;
+            })
+        .when(fcmService)
+        .saveDeviceToken(any(User.class), anyString(), any(), any());
+
+    // Configure mock FCMService to delegate removeDeviceToken to real
+    // UserDeviceRepository
+    doAnswer(
+            invocation -> {
+              String fcmToken = invocation.getArgument(0);
+              if (fcmToken != null && !fcmToken.isBlank()) {
+                userDeviceRepository
+                    .findByFcmToken(fcmToken)
+                    .ifPresent(
+                        device -> {
+                          device.setIsActive(false);
+                          userDeviceRepository.save(device);
+                        });
+              }
+              return null;
+            })
+        .when(fcmService)
+        .removeDeviceToken(anyString());
   }
 
   private User createTestUser(String username, String email, String password, boolean isAdmin) {
@@ -96,36 +140,39 @@ public class FCMNotificationIntegrationTest {
       return userRepository.findByUsername(username).orElseThrow();
     }
 
-    Role userRole = roleRepository
-        .findByName("USER")
-        .orElseGet(
-            () -> {
-              Role role = Role.builder().name("USER").build();
-              return roleRepository.save(role);
-            });
+    Role userRole =
+        roleRepository
+            .findByName("USER")
+            .orElseGet(
+                () -> {
+                  Role role = Role.builder().name("USER").build();
+                  return roleRepository.save(role);
+                });
 
     Set<Role> roles = new HashSet<>();
     roles.add(userRole);
 
     if (isAdmin) {
-      Role adminRole = roleRepository
-          .findByName("ADMIN")
-          .orElseGet(
-              () -> {
-                Role role = Role.builder().name("ADMIN").build();
-                return roleRepository.save(role);
-              });
+      Role adminRole =
+          roleRepository
+              .findByName("ADMIN")
+              .orElseGet(
+                  () -> {
+                    Role role = Role.builder().name("ADMIN").build();
+                    return roleRepository.save(role);
+                  });
       roles.add(adminRole);
     }
 
-    User user = User.builder()
-        .username(username)
-        .email(email)
-        .password(passwordEncoder.encode(password))
-        .isActive(true)
-        .roles(roles)
-        .authProvider(AuthProvider.LOCAL)
-        .build();
+    User user =
+        User.builder()
+            .username(username)
+            .email(email)
+            .password(passwordEncoder.encode(password))
+            .isActive(true)
+            .roles(roles)
+            .authProvider(AuthProvider.LOCAL)
+            .build();
 
     return userRepository.save(user);
   }
@@ -133,13 +180,14 @@ public class FCMNotificationIntegrationTest {
   private String getAuthToken(String username, String password) throws Exception {
     AuthRequest loginRequest = new AuthRequest(username, password, null, null, null);
 
-    MvcResult result = mockMvc
-        .perform(
-            post("/auth/login")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(loginRequest)))
-        .andExpect(status().isOk())
-        .andReturn();
+    MvcResult result =
+        mockMvc
+            .perform(
+                post("/auth/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(loginRequest)))
+            .andExpect(status().isOk())
+            .andReturn();
 
     String responseContent = result.getResponse().getContentAsString();
     return objectMapper.readTree(responseContent).path("data").path("token").asText();
@@ -260,7 +308,11 @@ public class FCMNotificationIntegrationTest {
 
     // Now unregister
     mockMvc
-        .perform(delete("/api/fcm/unregister").with(csrf()).param("fcmToken", fcmToken))
+        .perform(
+            delete("/api/fcm/unregister")
+                .with(csrf())
+                .param("fcmToken", fcmToken)
+                .header("Authorization", "Bearer " + token))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.success").value(true))
         .andExpect(jsonPath("$.message").value("Device unregistered from push notifications"));
@@ -274,15 +326,31 @@ public class FCMNotificationIntegrationTest {
   @Test
   @DisplayName("Should handle unregister for non-existent token gracefully")
   void unregisterDevice_NonExistentToken_ShouldSucceed() throws Exception {
+    User user = createTestUser(TEST_USER, TEST_EMAIL, TEST_PASSWORD, false);
+    String token = getAuthToken(TEST_USER, TEST_PASSWORD);
+
     mockMvc
-        .perform(delete("/api/fcm/unregister").with(csrf()).param("fcmToken", "non_existent_token_12345"))
+        .perform(
+            delete("/api/fcm/unregister")
+                .with(csrf())
+                .param("fcmToken", "non_existent_token_12345")
+                .header("Authorization", "Bearer " + token))
         .andExpect(status().isOk());
   }
 
   @Test
   @DisplayName("Should handle unregister for empty token gracefully")
   void unregisterDevice_EmptyToken_ShouldSucceed() throws Exception {
-    mockMvc.perform(delete("/api/fcm/unregister").with(csrf()).param("fcmToken", "")).andExpect(status().isOk());
+    User user = createTestUser(TEST_USER, TEST_EMAIL, TEST_PASSWORD, false);
+    String token = getAuthToken(TEST_USER, TEST_PASSWORD);
+
+    mockMvc
+        .perform(
+            delete("/api/fcm/unregister")
+                .with(csrf())
+                .param("fcmToken", "")
+                .header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk());
   }
 
   @Test
@@ -294,24 +362,26 @@ public class FCMNotificationIntegrationTest {
     String adminToken = getAuthToken(ADMIN_USER, ADMIN_PASSWORD);
 
     // Register a device for the target user
-    UserDevice device = UserDevice.builder()
-        .user(targetUser)
-        .fcmToken("target_device_token_" + System.currentTimeMillis())
-        .deviceName("Target Device")
-        .platform("ANDROID")
-        .isActive(true)
-        .build();
+    UserDevice device =
+        UserDevice.builder()
+            .user(targetUser)
+            .fcmToken("target_device_token_" + System.currentTimeMillis())
+            .deviceName("Target Device")
+            .platform("ANDROID")
+            .isActive(true)
+            .build();
     userDeviceRepository.save(device);
 
     // Mock FCMService response
     when(fcmService.sendPushNotification(any(), any(), any(), any())).thenReturn(1);
 
-    PushNotificationRequest request = PushNotificationRequest.builder()
-        .userId(targetUser.getId())
-        .title("Test Title")
-        .body("Test Body")
-        .data(Map.of("key", "value"))
-        .build();
+    PushNotificationRequest request =
+        PushNotificationRequest.builder()
+            .userId(targetUser.getId())
+            .title("Test Title")
+            .body("Test Body")
+            .data(Map.of("key", "value"))
+            .build();
 
     mockMvc
         .perform(
@@ -342,11 +412,12 @@ public class FCMNotificationIntegrationTest {
 
     when(fcmService.sendPushNotification(any(), any(), any(), any())).thenReturn(0);
 
-    PushNotificationRequest request = PushNotificationRequest.builder()
-        .userId(targetUser.getId())
-        .title("Test Title")
-        .body("Test Body")
-        .build();
+    PushNotificationRequest request =
+        PushNotificationRequest.builder()
+            .userId(targetUser.getId())
+            .title("Test Title")
+            .body("Test Body")
+            .build();
 
     mockMvc
         .perform(
@@ -366,7 +437,8 @@ public class FCMNotificationIntegrationTest {
     String adminToken = getAuthToken(ADMIN_USER, ADMIN_PASSWORD);
 
     // Missing userId
-    PushNotificationRequest request = PushNotificationRequest.builder().title("Test Title").body("Test Body").build();
+    PushNotificationRequest request =
+        PushNotificationRequest.builder().title("Test Title").body("Test Body").build();
 
     mockMvc
         .perform(
@@ -385,13 +457,14 @@ public class FCMNotificationIntegrationTest {
     String token = getAuthToken(TEST_USER, TEST_PASSWORD);
 
     // Register a device for the user
-    UserDevice device = UserDevice.builder()
-        .user(user)
-        .fcmToken("test_device_token_" + System.currentTimeMillis())
-        .deviceName("Test Device")
-        .platform("ANDROID")
-        .isActive(true)
-        .build();
+    UserDevice device =
+        UserDevice.builder()
+            .user(user)
+            .fcmToken("test_device_token_" + System.currentTimeMillis())
+            .deviceName("Test Device")
+            .platform("ANDROID")
+            .isActive(true)
+            .build();
     userDeviceRepository.save(device);
 
     when(fcmService.sendPushNotification(any(), any(), any(), any())).thenReturn(1);
@@ -438,13 +511,14 @@ public class FCMNotificationIntegrationTest {
     User user = createTestUser(TEST_USER, TEST_EMAIL, TEST_PASSWORD, false);
     String token = getAuthToken(TEST_USER, TEST_PASSWORD);
 
-    UserDevice device = UserDevice.builder()
-        .user(user)
-        .fcmToken("default_test_token_" + System.currentTimeMillis())
-        .deviceName("Test Device")
-        .platform("ANDROID")
-        .isActive(true)
-        .build();
+    UserDevice device =
+        UserDevice.builder()
+            .user(user)
+            .fcmToken("default_test_token_" + System.currentTimeMillis())
+            .deviceName("Test Device")
+            .platform("ANDROID")
+            .isActive(true)
+            .build();
     userDeviceRepository.save(device);
 
     when(fcmService.sendPushNotification(any(), any(), any(), any())).thenReturn(1);
@@ -473,20 +547,22 @@ public class FCMNotificationIntegrationTest {
     User user = createTestUser(TEST_USER, TEST_EMAIL, TEST_PASSWORD, false);
 
     // Create multiple devices for the user
-    UserDevice device1 = UserDevice.builder()
-        .user(user)
-        .fcmToken("token_1_" + System.currentTimeMillis())
-        .deviceName("Device 1")
-        .platform("ANDROID")
-        .isActive(true)
-        .build();
-    UserDevice device2 = UserDevice.builder()
-        .user(user)
-        .fcmToken("token_2_" + System.currentTimeMillis())
-        .deviceName("Device 2")
-        .platform("IOS")
-        .isActive(true)
-        .build();
+    UserDevice device1 =
+        UserDevice.builder()
+            .user(user)
+            .fcmToken("token_1_" + System.currentTimeMillis())
+            .deviceName("Device 1")
+            .platform("ANDROID")
+            .isActive(true)
+            .build();
+    UserDevice device2 =
+        UserDevice.builder()
+            .user(user)
+            .fcmToken("token_2_" + System.currentTimeMillis())
+            .deviceName("Device 2")
+            .platform("IOS")
+            .isActive(true)
+            .build();
     userDeviceRepository.save(device1);
     userDeviceRepository.save(device2);
 
@@ -501,20 +577,22 @@ public class FCMNotificationIntegrationTest {
   void findFcmTokensByUserId_InactiveDevices_ShouldExclude() throws Exception {
     User user = createTestUser(TEST_USER, TEST_EMAIL, TEST_PASSWORD, false);
 
-    UserDevice activeDevice = UserDevice.builder()
-        .user(user)
-        .fcmToken("active_token_" + System.currentTimeMillis())
-        .deviceName("Active Device")
-        .platform("ANDROID")
-        .isActive(true)
-        .build();
-    UserDevice inactiveDevice = UserDevice.builder()
-        .user(user)
-        .fcmToken("inactive_token_" + System.currentTimeMillis())
-        .deviceName("Inactive Device")
-        .platform("IOS")
-        .isActive(false)
-        .build();
+    UserDevice activeDevice =
+        UserDevice.builder()
+            .user(user)
+            .fcmToken("active_token_" + System.currentTimeMillis())
+            .deviceName("Active Device")
+            .platform("ANDROID")
+            .isActive(true)
+            .build();
+    UserDevice inactiveDevice =
+        UserDevice.builder()
+            .user(user)
+            .fcmToken("inactive_token_" + System.currentTimeMillis())
+            .deviceName("Inactive Device")
+            .platform("IOS")
+            .isActive(false)
+            .build();
     userDeviceRepository.save(activeDevice);
     userDeviceRepository.save(inactiveDevice);
 
@@ -531,7 +609,8 @@ public class FCMNotificationIntegrationTest {
     createTestUser(TEST_USER, TEST_EMAIL, TEST_PASSWORD, false);
     String fcmToken = "login_fcm_token_" + System.currentTimeMillis();
 
-    AuthRequest loginRequest = new AuthRequest(TEST_USER, TEST_PASSWORD, null, null, fcmToken);
+    AuthRequest loginRequest =
+        new AuthRequest(TEST_USER, TEST_PASSWORD, fcmToken, "Test Device", "ANDROID");
 
     mockMvc
         .perform(

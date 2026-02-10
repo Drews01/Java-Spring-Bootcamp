@@ -44,8 +44,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Integration tests for file upload flows including: - KTP image upload via
- * UserProfileController -
+ * Integration tests for file upload flows including: - KTP image upload via UserProfileController -
  * File download via FileController - File validation and storage interactions
  */
 @SpringBootTest
@@ -55,26 +54,19 @@ import org.springframework.transaction.annotation.Transactional;
 @TestPropertySource(properties = "app.storage.type=local")
 public class FileUploadIntegrationTest {
 
-  @Autowired
-  private MockMvc mockMvc;
+  @Autowired private MockMvc mockMvc;
 
-  @Autowired
-  private ObjectMapper objectMapper;
+  @Autowired private ObjectMapper objectMapper;
 
-  @Autowired
-  private UserRepository userRepository;
+  @Autowired private UserRepository userRepository;
 
-  @Autowired
-  private RoleRepository roleRepository;
+  @Autowired private RoleRepository roleRepository;
 
-  @Autowired
-  private UserProfileRepository userProfileRepository;
+  @Autowired private UserProfileRepository userProfileRepository;
 
-  @Autowired
-  private PasswordEncoder passwordEncoder;
+  @Autowired private PasswordEncoder passwordEncoder;
 
-  @Autowired
-  private StorageService storageService;
+  @Autowired private StorageService storageService;
 
   @Value("${app.upload.dir:./uploads}")
   private String uploadDir;
@@ -95,8 +87,9 @@ public class FileUploadIntegrationTest {
       if (Files.exists(uploadPath)) {
         Files.list(uploadPath)
             .filter(
-                path -> path.getFileName().toString().startsWith("test_")
-                    || path.getFileName().toString().contains("ktp"))
+                path ->
+                    path.getFileName().toString().startsWith("test_")
+                        || path.getFileName().toString().contains("ktp"))
             .forEach(
                 path -> {
                   try {
@@ -116,25 +109,27 @@ public class FileUploadIntegrationTest {
       return userRepository.findByUsername(TEST_USERNAME).orElseThrow();
     }
 
-    Role userRole = roleRepository
-        .findByName("USER")
-        .orElseGet(
-            () -> {
-              Role role = Role.builder().name("USER").build();
-              return roleRepository.save(role);
-            });
+    Role userRole =
+        roleRepository
+            .findByName("USER")
+            .orElseGet(
+                () -> {
+                  Role role = Role.builder().name("USER").build();
+                  return roleRepository.save(role);
+                });
 
     Set<Role> roles = new HashSet<>();
     roles.add(userRole);
 
-    User user = User.builder()
-        .username(TEST_USERNAME)
-        .email(TEST_EMAIL)
-        .password(passwordEncoder.encode(TEST_PASSWORD))
-        .isActive(true)
-        .roles(roles)
-        .authProvider(AuthProvider.LOCAL)
-        .build();
+    User user =
+        User.builder()
+            .username(TEST_USERNAME)
+            .email(TEST_EMAIL)
+            .password(passwordEncoder.encode(TEST_PASSWORD))
+            .isActive(true)
+            .roles(roles)
+            .authProvider(AuthProvider.LOCAL)
+            .build();
 
     return userRepository.save(user);
   }
@@ -144,13 +139,14 @@ public class FileUploadIntegrationTest {
 
     AuthRequest loginRequest = new AuthRequest(TEST_USERNAME, TEST_PASSWORD, null, null, null);
 
-    MvcResult result = mockMvc
-        .perform(
-            post("/auth/login")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(loginRequest)))
-        .andExpect(status().isOk())
-        .andReturn();
+    MvcResult result =
+        mockMvc
+            .perform(
+                post("/auth/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(loginRequest)))
+            .andExpect(status().isOk())
+            .andReturn();
 
     String responseContent = result.getResponse().getContentAsString();
     return objectMapper.readTree(responseContent).path("data").path("token").asText();
@@ -167,32 +163,34 @@ public class FileUploadIntegrationTest {
     when(storageService.uploadFile(any(), eq("ktp"))).thenReturn(mockFileUrl);
 
     // Create a valid JPEG file (minimal JPEG header)
-    byte[] jpegContent = new byte[] {
-        (byte) 0xFF,
-        (byte) 0xD8,
-        (byte) 0xFF,
-        (byte) 0xE0,
-        0x00,
-        0x10,
-        0x4A,
-        0x46,
-        0x49,
-        0x46,
-        0x00,
-        0x01,
-        0x01,
-        0x00,
-        0x00,
-        0x01,
-        0x00,
-        0x01,
-        0x00,
-        0x00,
-        (byte) 0xFF,
-        (byte) 0xD9
-    };
+    byte[] jpegContent =
+        new byte[] {
+          (byte) 0xFF,
+          (byte) 0xD8,
+          (byte) 0xFF,
+          (byte) 0xE0,
+          0x00,
+          0x10,
+          0x4A,
+          0x46,
+          0x49,
+          0x46,
+          0x00,
+          0x01,
+          0x01,
+          0x00,
+          0x00,
+          0x01,
+          0x00,
+          0x01,
+          0x00,
+          0x00,
+          (byte) 0xFF,
+          (byte) 0xD9
+        };
 
-    MockMultipartFile file = new MockMultipartFile("file", "test_ktp.jpg", MediaType.IMAGE_JPEG_VALUE, jpegContent);
+    MockMultipartFile file =
+        new MockMultipartFile("file", "test_ktp.jpg", MediaType.IMAGE_JPEG_VALUE, jpegContent);
 
     mockMvc
         .perform(
@@ -218,9 +216,10 @@ public class FileUploadIntegrationTest {
     when(storageService.uploadFile(any(), eq("ktp"))).thenReturn(mockFileUrl);
 
     // Create a valid PNG file (PNG signature)
-    byte[] pngContent = new byte[] { (byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
+    byte[] pngContent = new byte[] {(byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
 
-    MockMultipartFile file = new MockMultipartFile("file", "test_ktp.png", MediaType.IMAGE_PNG_VALUE, pngContent);
+    MockMultipartFile file =
+        new MockMultipartFile("file", "test_ktp.png", MediaType.IMAGE_PNG_VALUE, pngContent);
 
     mockMvc
         .perform(
@@ -237,9 +236,10 @@ public class FileUploadIntegrationTest {
   @Test
   @DisplayName("Should reject upload without authentication")
   void uploadKtp_NoAuthentication_ShouldReturn401() throws Exception {
-    byte[] jpegContent = new byte[] { (byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0 };
+    byte[] jpegContent = new byte[] {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0};
 
-    MockMultipartFile file = new MockMultipartFile("file", "test_ktp.jpg", MediaType.IMAGE_JPEG_VALUE, jpegContent);
+    MockMultipartFile file =
+        new MockMultipartFile("file", "test_ktp.jpg", MediaType.IMAGE_JPEG_VALUE, jpegContent);
 
     mockMvc
         .perform(multipart("/api/user-profiles/upload-ktp").file(file).with(csrf()))
@@ -252,7 +252,8 @@ public class FileUploadIntegrationTest {
     createTestUser();
     String token = getAuthToken();
 
-    MockMultipartFile emptyFile = new MockMultipartFile("file", "empty.jpg", MediaType.IMAGE_JPEG_VALUE, new byte[0]);
+    MockMultipartFile emptyFile =
+        new MockMultipartFile("file", "empty.jpg", MediaType.IMAGE_JPEG_VALUE, new byte[0]);
 
     mockMvc
         .perform(
@@ -272,7 +273,8 @@ public class FileUploadIntegrationTest {
     // Create a text file disguised as JPG
     byte[] textContent = "This is not an image".getBytes();
 
-    MockMultipartFile file = new MockMultipartFile("file", "fake.jpg", MediaType.IMAGE_JPEG_VALUE, textContent);
+    MockMultipartFile file =
+        new MockMultipartFile("file", "fake.jpg", MediaType.IMAGE_JPEG_VALUE, textContent);
 
     mockMvc
         .perform(
@@ -292,7 +294,8 @@ public class FileUploadIntegrationTest {
     // Create content that looks like an executable/script
     byte[] executableContent = "#!/bin/bash\necho 'malicious'".getBytes();
 
-    MockMultipartFile file = new MockMultipartFile("file", "script.jpg", MediaType.IMAGE_JPEG_VALUE, executableContent);
+    MockMultipartFile file =
+        new MockMultipartFile("file", "script.jpg", MediaType.IMAGE_JPEG_VALUE, executableContent);
 
     mockMvc
         .perform(
@@ -327,11 +330,13 @@ public class FileUploadIntegrationTest {
                     .contains("attachment; filename=\"" + testFileName + "\"");
               })
           .andExpect(
-              result -> assertThat(result.getResponse().getHeader("X-Content-Type-Options"))
-                  .isEqualTo("nosniff"))
+              result ->
+                  assertThat(result.getResponse().getHeader("X-Content-Type-Options"))
+                      .isEqualTo("nosniff"))
           .andExpect(
-              result -> assertThat(result.getResponse().getHeader("Content-Security-Policy"))
-                  .isEqualTo("default-src 'none'"));
+              result ->
+                  assertThat(result.getResponse().getHeader("Content-Security-Policy"))
+                      .isEqualTo("default-src 'none'"));
     } finally {
       // Cleanup
       Files.deleteIfExists(testFilePath);
@@ -352,11 +357,11 @@ public class FileUploadIntegrationTest {
     // Try to access files outside uploads directory
     mockMvc
         .perform(get("/uploads/{fileName}", "../../../etc/passwd"))
-        .andExpect(status().isNotFound());
+        .andExpect(status().isBadRequest());
 
     mockMvc
         .perform(get("/uploads/{fileName}", "..\\..\\windows\\system32\\config\\sam"))
-        .andExpect(status().isNotFound());
+        .andExpect(status().isBadRequest());
   }
 
   @Test
@@ -368,23 +373,25 @@ public class FileUploadIntegrationTest {
     String mockFileUrl = "http://localhost:8080/uploads/ktp_user_" + user.getId() + ".jpg";
     when(storageService.uploadFile(any(), eq("ktp"))).thenReturn(mockFileUrl);
 
-    byte[] jpegContent = new byte[] {
-        (byte) 0xFF,
-        (byte) 0xD8,
-        (byte) 0xFF,
-        (byte) 0xE0,
-        0x00,
-        0x10,
-        0x4A,
-        0x46,
-        0x49,
-        0x46,
-        0x00,
-        0x01
-    };
+    byte[] jpegContent =
+        new byte[] {
+          (byte) 0xFF,
+          (byte) 0xD8,
+          (byte) 0xFF,
+          (byte) 0xE0,
+          0x00,
+          0x10,
+          0x4A,
+          0x46,
+          0x49,
+          0x46,
+          0x00,
+          0x01
+        };
 
-    MockMultipartFile file = new MockMultipartFile(
-        "file", "ktp_update_test.jpg", MediaType.IMAGE_JPEG_VALUE, jpegContent);
+    MockMultipartFile file =
+        new MockMultipartFile(
+            "file", "ktp_update_test.jpg", MediaType.IMAGE_JPEG_VALUE, jpegContent);
 
     mockMvc
         .perform(
@@ -412,23 +419,25 @@ public class FileUploadIntegrationTest {
     String mockFileUrl = "http://localhost:8080/uploads/ktp_new_profile_" + user.getId() + ".jpg";
     when(storageService.uploadFile(any(), eq("ktp"))).thenReturn(mockFileUrl);
 
-    byte[] jpegContent = new byte[] {
-        (byte) 0xFF,
-        (byte) 0xD8,
-        (byte) 0xFF,
-        (byte) 0xE0,
-        0x00,
-        0x10,
-        0x4A,
-        0x46,
-        0x49,
-        0x46,
-        0x00,
-        0x01
-    };
+    byte[] jpegContent =
+        new byte[] {
+          (byte) 0xFF,
+          (byte) 0xD8,
+          (byte) 0xFF,
+          (byte) 0xE0,
+          0x00,
+          0x10,
+          0x4A,
+          0x46,
+          0x49,
+          0x46,
+          0x00,
+          0x01
+        };
 
-    MockMultipartFile file = new MockMultipartFile(
-        "file", "ktp_new_profile.jpg", MediaType.IMAGE_JPEG_VALUE, jpegContent);
+    MockMultipartFile file =
+        new MockMultipartFile(
+            "file", "ktp_new_profile.jpg", MediaType.IMAGE_JPEG_VALUE, jpegContent);
 
     mockMvc
         .perform(
@@ -452,23 +461,25 @@ public class FileUploadIntegrationTest {
     String expectedUrl = "http://localhost:8080/uploads/mock_storage_test.jpg";
     when(storageService.uploadFile(any(), eq("ktp"))).thenReturn(expectedUrl);
 
-    byte[] jpegContent = new byte[] {
-        (byte) 0xFF,
-        (byte) 0xD8,
-        (byte) 0xFF,
-        (byte) 0xE0,
-        0x00,
-        0x10,
-        0x4A,
-        0x46,
-        0x49,
-        0x46,
-        0x00,
-        0x01
-    };
+    byte[] jpegContent =
+        new byte[] {
+          (byte) 0xFF,
+          (byte) 0xD8,
+          (byte) 0xFF,
+          (byte) 0xE0,
+          0x00,
+          0x10,
+          0x4A,
+          0x46,
+          0x49,
+          0x46,
+          0x00,
+          0x01
+        };
 
-    MockMultipartFile file = new MockMultipartFile(
-        "file", "mock_storage_test.jpg", MediaType.IMAGE_JPEG_VALUE, jpegContent);
+    MockMultipartFile file =
+        new MockMultipartFile(
+            "file", "mock_storage_test.jpg", MediaType.IMAGE_JPEG_VALUE, jpegContent);
 
     mockMvc
         .perform(
