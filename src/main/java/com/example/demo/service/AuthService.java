@@ -1,28 +1,23 @@
 package com.example.demo.service;
 
+import com.example.demo.constants.ErrorMessage;
 import com.example.demo.dto.AuthRequest;
 import com.example.demo.dto.AuthResponse;
 import com.example.demo.dto.RegisterRequest;
-import com.example.demo.entity.AuthProvider;
 import com.example.demo.entity.Role;
 import com.example.demo.entity.User;
 import com.example.demo.entity.UserProfile;
+import com.example.demo.enums.RoleName;
 import com.example.demo.repository.RoleRepository;
 import com.example.demo.repository.UserProfileRepository;
 import com.example.demo.repository.UserRepository;
 import com.example.demo.security.CustomUserDetails;
 import com.example.demo.security.JwtService;
-import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
-import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
-import com.google.api.client.http.javanet.NetHttpTransport;
-import com.google.api.client.json.gson.GsonFactory;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -61,7 +56,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class AuthService {
+public class AuthService implements IAuthService {
 
   private final UserRepository userRepository;
   private final RoleRepository roleRepository;
@@ -74,9 +69,6 @@ public class AuthService {
   private final PasswordResetService passwordResetService;
   private final EmailService emailService;
   private final FCMService fcmService;
-
-  @Value("${app.google.client-id:}")
-  private String googleClientId;
 
   /**
    * Registers a new user in the system.
@@ -95,25 +87,26 @@ public class AuthService {
    * @return AuthResponse containing JWT tokens and user information
    * @throws IllegalArgumentException if username or email already exists
    */
+  @Override
   @Transactional
   public AuthResponse register(RegisterRequest request) {
     // Check if username already exists
     if (userRepository.existsByUsername(request.username())) {
-      throw new IllegalArgumentException("Username already exists");
+      throw new IllegalArgumentException(ErrorMessage.USERNAME_EXISTS);
     }
 
     // Check if email already exists
     if (userRepository.existsByEmail(request.email())) {
-      throw new IllegalArgumentException("Email already exists");
+      throw new IllegalArgumentException(ErrorMessage.EMAIL_EXISTS);
     }
 
     // Get or create USER role
     Role userRole =
         roleRepository
-            .findByName("USER")
+            .findByName(RoleName.USER.getRoleName())
             .orElseGet(
                 () -> {
-                  Role newRole = Role.builder().name("USER").build();
+                  Role newRole = Role.builder().name(RoleName.USER.getRoleName()).build();
                   return roleRepository.save(newRole);
                 });
 
@@ -163,6 +156,7 @@ public class AuthService {
    * @return AuthResponse containing JWT tokens and user information
    * @throws org.springframework.security.core.AuthenticationException if credentials are invalid
    */
+  @Override
   public AuthResponse login(AuthRequest request) {
     // Authenticate user
     log.info("Login attempt for: {}", request.usernameOrEmail());
@@ -195,100 +189,14 @@ public class AuthService {
     return buildAuthResponse(token, refreshToken, userDetails.getUser());
   }
 
-  /** Login user with Google ID Token */
-  @Transactional
-  public AuthResponse loginWithGoogle(String idTokenString) {
-    try {
-      GoogleIdTokenVerifier verifier =
-          new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), new GsonFactory())
-              .setAudience(Collections.singletonList(googleClientId))
-              .build();
-
-      GoogleIdToken idToken = verifier.verify(idTokenString);
-      if (idToken == null) {
-        throw new IllegalArgumentException("Invalid Google ID Token");
-      }
-
-      GoogleIdToken.Payload payload = idToken.getPayload();
-      String email = payload.getEmail();
-      String name = (String) payload.get("name");
-
-      if (email == null) {
-        throw new IllegalArgumentException("Email not found in ID Token");
-      }
-
-      // Check if user exists
-      User user =
-          userRepository
-              .findByEmail(email)
-              .orElseGet(
-                  () -> {
-                    // Create new user
-                    return createGoogleUser(email, name);
-                  });
-
-      // Update auth provider if currently LOCAL (Account Linking) or ensure it's set
-      if (user.getAuthProvider() == null) {
-        user.setAuthProvider(AuthProvider.GOOGLE);
-        userRepository.save(user);
-      }
-
-      // Generate tokens
-      CustomUserDetails userDetails = new CustomUserDetails(user);
-      String token = jwtService.generateToken(userDetails);
-      String refreshToken = jwtService.generateRefreshToken(userDetails);
-
-      // Store refresh token
-      refreshTokenService.createRefreshToken(
-          user.getId(), jwtService.getRefreshExpirationSeconds());
-
-      return buildAuthResponse(token, refreshToken, user);
-
-    } catch (Exception e) {
-      log.error("Google Login Failed", e);
-      throw new IllegalArgumentException("Google Login Failed: " + e.getMessage());
-    }
-  }
-
-  private User createGoogleUser(String email, String name) {
-    Role userRole =
-        roleRepository
-            .findByName("USER")
-            .orElseGet(
-                () -> {
-                  Role newRole = Role.builder().name("USER").build();
-                  return roleRepository.save(newRole);
-                });
-
-    Set<Role> roles = new HashSet<>();
-    roles.add(userRole);
-
-    User user =
-        User.builder()
-            .username(email) // Use email as username for Google users
-            .email(email)
-            .password(null) // No password
-            .authProvider(AuthProvider.GOOGLE)
-            .isActive(true)
-            .roles(roles)
-            .build();
-
-    User savedUser = userRepository.save(user);
-
-    // Create empty UserProfile for USER role
-    UserProfile profile = UserProfile.builder().user(savedUser).build();
-    userProfileRepository.save(profile);
-
-    return savedUser;
-  }
-
   /** Refresh access token */
+  @Override
   public AuthResponse refreshAccessToken(String refreshToken) {
     // 1. Validate refresh token in Redis
     Long userId =
         refreshTokenService
             .validateRefreshToken(refreshToken)
-            .orElseThrow(() -> new IllegalArgumentException("Invalid or expired refresh token"));
+            .orElseThrow(() -> new IllegalArgumentException(ErrorMessage.INVALID_REFRESH_TOKEN));
 
     // 2. Validate JWT signature and expiration
     // We create a dummy/temp user details just for validation or fetch user?
@@ -296,15 +204,18 @@ public class AuthService {
     User user =
         userRepository
             .findById(userId)
-            .orElseThrow(() -> new IllegalArgumentException("User not found"));
+            .orElseThrow(
+                () ->
+                    new IllegalArgumentException(
+                        String.format(ErrorMessage.USER_NOT_FOUND, userId)));
 
     if (!Boolean.TRUE.equals(user.getIsActive())) {
-      throw new IllegalArgumentException("User is inactive");
+      throw new IllegalArgumentException(ErrorMessage.USER_INACTIVE);
     }
 
     CustomUserDetails userDetails = new CustomUserDetails(user);
     if (!jwtService.isTokenValid(refreshToken, userDetails)) {
-      throw new IllegalArgumentException("Invalid refresh token");
+      throw new IllegalArgumentException(ErrorMessage.INVALID_REFRESH_TOKEN);
     }
 
     // 3. Generate new access token
@@ -324,6 +235,7 @@ public class AuthService {
   }
 
   /** Logout user by blacklisting the token */
+  @Override
   public void logout(String token) {
     // Extract expiration to calculate TTL
     java.time.Instant expiration = jwtService.extractExpirationInstant(token);
@@ -342,12 +254,16 @@ public class AuthService {
   }
 
   /** Initiate password reset */
+  @Override
   @Transactional
   public void forgotPassword(String email) {
     User user =
         userRepository
             .findByEmail(email)
-            .orElseThrow(() -> new IllegalArgumentException("User not found with email: " + email));
+            .orElseThrow(
+                () ->
+                    new IllegalArgumentException(
+                        String.format(ErrorMessage.USER_NOT_FOUND_EMAIL, email)));
 
     // Create reset token (valid for 1 hour) in Redis
     String token = passwordResetService.createPasswordResetToken(user.getId(), 1);
@@ -358,6 +274,7 @@ public class AuthService {
   }
 
   /** Reset password */
+  @Override
   @Transactional
   public void resetPassword(String token, String newPassword) {
     Long userId =
@@ -369,7 +286,10 @@ public class AuthService {
     User user =
         userRepository
             .findById(userId)
-            .orElseThrow(() -> new IllegalArgumentException("User not found"));
+            .orElseThrow(
+                () ->
+                    new IllegalArgumentException(
+                        String.format(ErrorMessage.USER_NOT_FOUND, userId)));
 
     // Update password
     user.setPassword(passwordEncoder.encode(newPassword));

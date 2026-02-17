@@ -3,6 +3,7 @@ package com.example.demo.service;
 import com.example.demo.dto.NotificationDTO;
 import com.example.demo.entity.LoanApplication;
 import com.example.demo.entity.User;
+import com.example.demo.enums.RoleName;
 import com.example.demo.repository.UserRepository;
 import com.example.demo.service.notification.NotificationChannel;
 import java.util.HashMap;
@@ -130,7 +131,8 @@ public class LoanNotificationService {
 
     // IN_REVIEW -> WAITING_APPROVAL: Notify branch managers
     if ("IN_REVIEW".equals(fromStatus) && "WAITING_APPROVAL".equals(toStatus)) {
-      List<User> branchManagers = userRepository.findByRoles_Name("BRANCH_MANAGER");
+      List<User> branchManagers =
+          userRepository.findByRoles_Name(RoleName.BRANCH_MANAGER.getRoleName());
       for (User manager : branchManagers) {
         notificationService.createNotification(
             NotificationDTO.builder()
@@ -155,7 +157,8 @@ public class LoanNotificationService {
 
     // WAITING_APPROVAL -> APPROVED_WAITING_DISBURSEMENT: Notify back office
     if ("WAITING_APPROVAL".equals(fromStatus) && "APPROVED_WAITING_DISBURSEMENT".equals(toStatus)) {
-      List<User> backOfficeUsers = userRepository.findByRoles_Name("BACK_OFFICE");
+      List<User> backOfficeUsers =
+          userRepository.findByRoles_Name(RoleName.BACK_OFFICE.getRoleName());
       for (User backOffice : backOfficeUsers) {
         notificationService.createNotification(
             NotificationDTO.builder()

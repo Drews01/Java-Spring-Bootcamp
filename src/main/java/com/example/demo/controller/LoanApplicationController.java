@@ -1,27 +1,21 @@
 package com.example.demo.controller;
 
 import com.example.demo.base.ApiResponse;
+import com.example.demo.base.BaseController;
 import com.example.demo.base.ResponseUtil;
 import com.example.demo.dto.LoanApplicationDTO;
-import com.example.demo.entity.User;
-import com.example.demo.exception.ResourceNotFoundException;
-import com.example.demo.repository.UserRepository;
-import com.example.demo.security.CustomUserDetails;
 import com.example.demo.service.LoanApplicationService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/loan-applications")
 @RequiredArgsConstructor
-public class LoanApplicationController {
+public class LoanApplicationController extends BaseController {
 
   private final LoanApplicationService loanApplicationService;
-  private final UserRepository userRepository;
 
   @PostMapping
   public ResponseEntity<ApiResponse<LoanApplicationDTO>> createLoanApplication(
@@ -80,20 +74,5 @@ public class LoanApplicationController {
       @PathVariable Long loanApplicationId) {
     loanApplicationService.deleteLoanApplication(loanApplicationId);
     return ResponseUtil.okMessage("Loan application deleted successfully");
-  }
-
-  private Long getCurrentUserId() {
-    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-    if (authentication != null && authentication.getPrincipal() instanceof CustomUserDetails) {
-      CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-      return userDetails.getId();
-    }
-
-    // Fallback for testing - return first user
-    return userRepository.findAll().stream()
-        .findFirst()
-        .map(User::getId)
-        .orElseThrow(() -> new ResourceNotFoundException("No users found in the system"));
   }
 }

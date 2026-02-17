@@ -1,4 +1,8 @@
 spring:
+  data:
+    redis:
+      enabled: false
+  
   datasource:
     url: jdbc:h2:mem:testdb
     driver-class-name: org.h2.Driver
@@ -17,12 +21,6 @@ spring:
           auth: false
           starttls:
             enable: false
-  
-  # Redis configuration for tests
-  data:
-    redis:
-      host: localhost
-      port: 6379
   
   jpa:
     hibernate:

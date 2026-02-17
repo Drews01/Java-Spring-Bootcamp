@@ -6,6 +6,7 @@ import com.example.demo.entity.LoanApplication;
 import com.example.demo.entity.LoanHistory;
 import com.example.demo.entity.Product;
 import com.example.demo.entity.User;
+import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -81,6 +82,8 @@ class LoanHistoryRepositoryTest {
   @DisplayName("Should find loan history by loan application ID ordered by created at desc")
   void findByLoanApplication_LoanApplicationIdOrderByCreatedAtDesc_shouldReturnHistory() {
     // Given
+    LocalDateTime baseTime = LocalDateTime.of(2024, 1, 1, 10, 0, 0);
+
     LoanHistory history1 =
         LoanHistory.builder()
             .loanApplication(testLoan)
@@ -88,6 +91,7 @@ class LoanHistoryRepositoryTest {
             .action("SUBMIT")
             .fromStatus(null)
             .toStatus("SUBMITTED")
+            .createdAt(baseTime)
             .build();
     entityManager.persist(history1);
 
@@ -99,6 +103,7 @@ class LoanHistoryRepositoryTest {
             .fromStatus("SUBMITTED")
             .toStatus("IN_REVIEW")
             .comment("Initial review started")
+            .createdAt(baseTime.plusHours(1))
             .build();
     entityManager.persist(history2);
 

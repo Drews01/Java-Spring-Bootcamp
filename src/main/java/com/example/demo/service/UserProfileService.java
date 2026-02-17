@@ -16,7 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor
-public class UserProfileService {
+public class UserProfileService implements IUserProfileService {
 
   private final UserProfileRepository userProfileRepository;
   private final UserRepository userRepository;
@@ -24,6 +24,7 @@ public class UserProfileService {
   private final LoanEligibilityService loanEligibilityService;
   private final StorageService storageService;
 
+  @Override
   @Transactional
   public UserProfileDTO createUserProfile(Long userId, UserProfileDTO dto) {
     User user =
@@ -52,6 +53,7 @@ public class UserProfileService {
     return convertToDTO(saved);
   }
 
+  @Override
   @Transactional(readOnly = true)
   public UserProfileDTO getUserProfile(Long userId) {
     UserProfile userProfile =
@@ -63,6 +65,7 @@ public class UserProfileService {
     return convertToDTO(userProfile);
   }
 
+  @Override
   @Transactional(readOnly = true)
   public List<UserProfileDTO> getAllUserProfiles() {
     return userProfileRepository.findAll().stream()
@@ -70,6 +73,7 @@ public class UserProfileService {
         .collect(Collectors.toList());
   }
 
+  @Override
   @Transactional
   public UserProfileDTO updateUserProfile(Long userId, UserProfileDTO dto) {
     UserProfile userProfile =
@@ -98,11 +102,13 @@ public class UserProfileService {
     return convertToDTO(updated);
   }
 
+  @Override
   @Transactional
   public void deleteUserProfile(Long userId) {
     userProfileRepository.deleteById(userId);
   }
 
+  @Override
   @Transactional
   public UploadImageResponse uploadKtp(Long userId, MultipartFile file) {
     if (file.isEmpty()) {
@@ -148,6 +154,7 @@ public class UserProfileService {
    * @param userId the user ID to check
    * @return true if profile exists and all required fields are filled, false otherwise
    */
+  @Override
   @Transactional(readOnly = true)
   public boolean isProfileComplete(Long userId) {
     return userProfileRepository

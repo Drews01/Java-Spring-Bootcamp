@@ -2,6 +2,7 @@ package com.example.demo.service;
 
 import com.example.demo.entity.Role;
 import com.example.demo.entity.User;
+import com.example.demo.enums.RoleName;
 import com.example.demo.repository.RoleMenuRepository;
 import com.example.demo.repository.UserRepository;
 import java.util.Set;
@@ -35,7 +36,7 @@ public class AccessControlService {
     Set<String> roleNames = user.getRoles().stream().map(Role::getName).collect(Collectors.toSet());
 
     // Optimization: Admin has access to everything
-    if (roleNames.contains("ADMIN")) {
+    if (roleNames.contains(RoleName.ADMIN.getRoleName())) {
       return true;
     }
 

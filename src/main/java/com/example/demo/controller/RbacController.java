@@ -6,6 +6,7 @@ import com.example.demo.dto.BulkRoleMenuUpdateRequest;
 import com.example.demo.dto.RoleAccessDTO;
 import com.example.demo.dto.RoleAccessSummaryDTO;
 import com.example.demo.service.RbacService;
+import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -45,7 +46,7 @@ public class RbacController {
 
   @PutMapping("/roles/{roleId}/access")
   public ResponseEntity<ApiResponse<RoleAccessDTO>> updateRoleAccess(
-      @PathVariable Long roleId, @RequestBody BulkRoleMenuUpdateRequest request) {
+      @PathVariable Long roleId, @Valid @RequestBody BulkRoleMenuUpdateRequest request) {
     RoleAccessDTO roleAccess = rbacService.updateRoleAccess(roleId, request);
     return ResponseUtil.ok(roleAccess, "Role access updated successfully");
   }

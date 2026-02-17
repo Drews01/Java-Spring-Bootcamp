@@ -10,7 +10,8 @@ import com.example.demo.dto.RegisterRequest;
 import com.example.demo.dto.ResetPasswordRequest;
 import com.example.demo.entity.Role;
 import com.example.demo.security.CustomUserDetails;
-import com.example.demo.service.AuthService;
+import com.example.demo.service.IAuthService;
+import com.example.demo.service.IOAuthService;
 import com.example.demo.util.CookieUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -38,7 +39,8 @@ import org.springframework.web.bind.annotation.RestController;
 @Slf4j
 public class AuthController {
 
-  private final AuthService authService;
+  private final IAuthService authService;
+  private final IOAuthService oAuthService;
 
   @Value("${app.security.jwt.expiration-seconds:3600}")
   private long jwtExpirationSeconds;
@@ -76,7 +78,7 @@ public class AuthController {
       @Valid @RequestBody com.example.demo.dto.GoogleLoginRequest request,
       HttpServletResponse response) {
     try {
-      AuthResponse authResponse = authService.loginWithGoogle(request.idToken());
+      AuthResponse authResponse = oAuthService.loginWithGoogle(request.idToken());
       // Set JWT in HttpOnly cookie
       ResponseCookie jwtCookie =
           CookieUtil.createJwtCookie(authResponse.token(), jwtExpirationSeconds, secureCookie);

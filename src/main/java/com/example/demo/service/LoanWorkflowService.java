@@ -54,7 +54,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class LoanWorkflowService {
+public class LoanWorkflowService implements ILoanWorkflowService {
 
   private final LoanApplicationRepository loanApplicationRepository;
   private final LoanHistoryRepository loanHistoryRepository;
@@ -64,10 +64,11 @@ public class LoanWorkflowService {
   private final NotificationService notificationService;
   private final AccessControlService accessControl;
   private final LoanEligibilityService loanEligibilityService;
-  private final UserProfileService userProfileService;
+  private final IUserProfileService userProfileService;
   private final EmailService emailService;
   private final LoanNotificationService loanNotificationService;
 
+  @Override
   @Transactional
   public LoanApplicationDTO submitLoan(LoanSubmitRequest request, Long userId) {
     User user =
@@ -178,6 +179,7 @@ public class LoanWorkflowService {
     return convertToDTO(saved);
   }
 
+  @Override
   @Transactional
   public LoanApplicationDTO performAction(LoanActionRequest request, Long actorUserId) {
     LoanApplication loanApplication =

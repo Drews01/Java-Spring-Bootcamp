@@ -6,6 +6,7 @@ import com.example.demo.dto.UpdateBranchRequest;
 import com.example.demo.dto.UserBranchDTO;
 import com.example.demo.entity.Branch;
 import com.example.demo.entity.User;
+import com.example.demo.enums.RoleName;
 import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.BranchRepository;
 import com.example.demo.repository.UserRepository;
@@ -130,8 +131,8 @@ public class BranchService {
         user.getRoles().stream()
             .anyMatch(
                 role ->
-                    role.getName().equalsIgnoreCase("MARKETING")
-                        || role.getName().equalsIgnoreCase("BRANCH_MANAGER"));
+                    role.getName().equalsIgnoreCase(RoleName.MARKETING.getRoleName())
+                        || role.getName().equalsIgnoreCase(RoleName.BRANCH_MANAGER.getRoleName()));
 
     if (!hasAssignableRole) {
       throw new IllegalArgumentException(
@@ -177,8 +178,9 @@ public class BranchService {
                 user.getRoles().stream()
                     .anyMatch(
                         role ->
-                            role.getName().equalsIgnoreCase("MARKETING")
-                                || role.getName().equalsIgnoreCase("BRANCH_MANAGER")))
+                            role.getName().equalsIgnoreCase(RoleName.MARKETING.getRoleName())
+                                || role.getName()
+                                    .equalsIgnoreCase(RoleName.BRANCH_MANAGER.getRoleName())))
         .map(UserBranchDTO::fromUser)
         .collect(Collectors.toList());
   }

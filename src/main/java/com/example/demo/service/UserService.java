@@ -1,9 +1,11 @@
 package com.example.demo.service;
 
+import com.example.demo.constants.ErrorMessage;
 import com.example.demo.dto.AdminCreateUserRequest;
 import com.example.demo.dto.UserListDTO;
 import com.example.demo.entity.Role;
 import com.example.demo.entity.User;
+import com.example.demo.enums.RoleName;
 import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.RoleRepository;
 import com.example.demo.repository.UserRepository;
@@ -21,7 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-public class UserService {
+public class UserService implements IUserService {
 
   private final UserRepository userRepository;
   private final RoleRepository roleRepository;
@@ -29,18 +31,21 @@ public class UserService {
   private final EmailService emailService;
   private final PasswordResetService passwordResetService;
 
+  @Override
   @Transactional
   public UserListDTO createUser(User user) {
     User saved = userRepository.save(user);
     return UserListDTO.fromUser(saved);
   }
 
+  @Override
   public List<UserListDTO> getAllUsers() {
     return userRepository.findByDeletedFalse().stream()
         .map(UserListDTO::fromUser)
         .collect(Collectors.toList());
   }
 
+  @Override
   public UserListDTO getUserById(Long id) {
     User user = findUserById(id);
     return UserListDTO.fromUser(user);
@@ -54,6 +59,7 @@ public class UserService {
         .orElseThrow(() -> new ResourceNotFoundException("User", "id", id));
   }
 
+  @Override
   @Transactional
   public UserListDTO updateUser(Long id, User userDetails) {
     User user =
@@ -71,6 +77,7 @@ public class UserService {
     return UserListDTO.fromUser(saved);
   }
 
+  @Override
   @Transactional
   public void deleteUser(Long id) {
     User user = findUserById(id);
@@ -79,6 +86,7 @@ public class UserService {
     userRepository.save(user);
   }
 
+  @Override
   public Page<UserListDTO> getAllUsersForAdmin(Pageable pageable) {
     return userRepository.findByDeletedFalse(pageable).map(UserListDTO::fromUser);
   }
@@ -86,6 +94,7 @@ public class UserService {
   // ============= ADMIN USER MANAGEMENT =============
 
   /** Admin: Set user active/inactive status */
+  @Override
   @Transactional
   public UserListDTO setUserActiveStatus(Long userId, Boolean isActive, Long currentAdminId) {
     User user = findUserById(userId);
@@ -110,6 +119,7 @@ public class UserService {
   }
 
   /** Admin: Update user's roles */
+  @Override
   @Transactional
   public UserListDTO updateUserRoles(Long userId, Set<String> roleNames, Long currentAdminId) {
     User user = findUserById(userId);
@@ -117,10 +127,11 @@ public class UserService {
     // IDOR Protection: Prevent self-role-removal of ADMIN role
     boolean currentUserIsTarget = userId.equals(currentAdminId);
     boolean removingAdminRole =
-        isUserAdmin(user) && !roleNames.stream().anyMatch(r -> r.equalsIgnoreCase("ADMIN"));
+        isUserAdmin(user)
+            && !roleNames.stream().anyMatch(r -> r.equalsIgnoreCase(RoleName.ADMIN.getRoleName()));
 
     if (currentUserIsTarget && removingAdminRole) {
-      throw new IllegalArgumentException("Cannot remove ADMIN role from your own account");
+      throw new IllegalArgumentException(ErrorMessage.CANNOT_REMOVE_OWN_ADMIN);
     }
 
     // IDOR Protection: Protect last admin - cannot remove ADMIN role if last admin
@@ -148,7 +159,8 @@ public class UserService {
 
   /** Check if user has ADMIN role */
   private boolean isUserAdmin(User user) {
-    return user.getRoles().stream().anyMatch(role -> "ADMIN".equalsIgnoreCase(role.getName()));
+    return user.getRoles().stream()
+        .anyMatch(role -> RoleName.ADMIN.getRoleName().equalsIgnoreCase(role.getName()));
   }
 
   /** Count active users with ADMIN role */
@@ -160,16 +172,17 @@ public class UserService {
   }
 
   /** Admin: Create new user with roles (no password - user resets via email) */
+  @Override
   @Transactional
   public UserListDTO createUserByAdmin(AdminCreateUserRequest request) {
     // Validate username uniqueness
     if (userRepository.existsByUsername(request.username())) {
-      throw new IllegalArgumentException("Username already exists");
+      throw new IllegalArgumentException(ErrorMessage.USERNAME_EXISTS);
     }
 
     // Validate email uniqueness
     if (userRepository.existsByEmail(request.email())) {
-      throw new IllegalArgumentException("Email already exists");
+      throw new IllegalArgumentException(ErrorMessage.EMAIL_EXISTS);
     }
 
     // Get roles
@@ -186,8 +199,9 @@ public class UserService {
       // Default to USER role if no roles specified
       Role userRole =
           roleRepository
-              .findByName("USER")
-              .orElseThrow(() -> new ResourceNotFoundException("Default USER role not found"));
+              .findByName(RoleName.USER.getRoleName())
+              .orElseThrow(
+                  () -> new ResourceNotFoundException(ErrorMessage.DEFAULT_ROLE_NOT_FOUND));
       roles.add(userRole);
     }
 

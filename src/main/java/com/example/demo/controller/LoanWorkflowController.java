@@ -1,6 +1,7 @@
 package com.example.demo.controller;
 
 import com.example.demo.base.ApiResponse;
+import com.example.demo.base.BaseController;
 import com.example.demo.base.ResponseUtil;
 import com.example.demo.dto.ActionHistoryDTO;
 import com.example.demo.dto.ActionHistoryRequestDTO;
@@ -17,9 +18,9 @@ import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.LoanApplicationRepository;
 import com.example.demo.repository.LoanHistoryRepository;
 import com.example.demo.repository.UserRepository;
-import com.example.demo.security.CustomUserDetails;
 import com.example.demo.service.ActionHistoryService;
-import com.example.demo.service.LoanWorkflowService;
+import com.example.demo.service.ILoanWorkflowService;
+import jakarta.validation.Valid;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -30,16 +31,14 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/loan-workflow")
 @RequiredArgsConstructor
-public class LoanWorkflowController {
+public class LoanWorkflowController extends BaseController {
 
-  private final LoanWorkflowService loanWorkflowService;
+  private final ILoanWorkflowService loanWorkflowService;
   private final LoanApplicationRepository loanApplicationRepository;
   private final LoanHistoryRepository loanHistoryRepository;
   private final UserRepository userRepository;
@@ -47,7 +46,7 @@ public class LoanWorkflowController {
 
   @PostMapping("/submit")
   public ResponseEntity<ApiResponse<LoanApplicationDTO>> submitLoan(
-      @RequestBody LoanSubmitRequest request) {
+      @Valid @RequestBody LoanSubmitRequest request) {
     // SECURITY: userId is extracted from JWT token ONLY to prevent IDOR
     Long authenticatedUserId = getCurrentUserId();
     LoanApplicationDTO created = loanWorkflowService.submitLoan(request, authenticatedUserId);
@@ -56,7 +55,7 @@ public class LoanWorkflowController {
 
   @PostMapping("/action")
   public ResponseEntity<ApiResponse<LoanApplicationDTO>> performAction(
-      @RequestBody LoanActionRequest request) {
+      @Valid @RequestBody LoanActionRequest request) {
     Long actorUserId = getCurrentUserId();
     LoanApplicationDTO updated = loanWorkflowService.performAction(request, actorUserId);
     return ResponseUtil.ok(updated, "Action performed successfully");
@@ -258,20 +257,5 @@ public class LoanWorkflowController {
               .branchName(loanBranch != null ? loanBranch.getName() : null)
               .build();
         });
-  }
-
-  private Long getCurrentUserId() {
-    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-    if (authentication != null && authentication.getPrincipal() instanceof CustomUserDetails) {
-      CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-      return userDetails.getId();
-    }
-
-    // Fallback for testing - return first user
-    return userRepository.findAll().stream()
-        .findFirst()
-        .map(User::getId)
-        .orElseThrow(() -> new RuntimeException("No users found"));
   }
 }

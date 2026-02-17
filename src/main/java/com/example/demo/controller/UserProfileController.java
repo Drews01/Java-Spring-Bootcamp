@@ -1,29 +1,25 @@
 package com.example.demo.controller;
 
 import com.example.demo.base.ApiResponse;
+import com.example.demo.base.BaseController;
 import com.example.demo.base.ResponseUtil;
+import com.example.demo.constants.ApiMessage;
 import com.example.demo.dto.UploadImageResponse;
 import com.example.demo.dto.UserProfileDTO;
-import com.example.demo.entity.User;
-import com.example.demo.exception.ResourceNotFoundException;
-import com.example.demo.repository.UserRepository;
-import com.example.demo.security.CustomUserDetails;
-import com.example.demo.service.UserProfileService;
+import com.example.demo.service.IUserProfileService;
+import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/user-profiles")
 @RequiredArgsConstructor
-public class UserProfileController {
+public class UserProfileController extends BaseController {
 
-  private final UserProfileService userProfileService;
-  private final UserRepository userRepository;
+  private final IUserProfileService userProfileService;
 
   /**
    * Create or update user profile for the authenticated user. SECURITY: userId is extracted from
@@ -31,7 +27,7 @@ public class UserProfileController {
    */
   @PostMapping
   public ResponseEntity<ApiResponse<UserProfileDTO>> createOrUpdateUserProfile(
-      @RequestBody UserProfileDTO dto) {
+      @Valid @RequestBody UserProfileDTO dto) {
     // SECURITY: Extract userId from JWT token, ignore any userId in request body
     Long authenticatedUserId = getCurrentUserId();
 
@@ -40,11 +36,11 @@ public class UserProfileController {
       UserProfileDTO existing = userProfileService.getUserProfile(authenticatedUserId);
       // Profile exists, update it
       UserProfileDTO updated = userProfileService.updateUserProfile(authenticatedUserId, dto);
-      return ResponseUtil.ok(updated, "User profile updated successfully");
+      return ResponseUtil.ok(updated, ApiMessage.PROFILE_UPDATED);
     } catch (RuntimeException e) {
       // Profile doesn't exist, create it
       UserProfileDTO created = userProfileService.createUserProfile(authenticatedUserId, dto);
-      return ResponseUtil.created(created, "User profile created successfully");
+      return ResponseUtil.created(created, ApiMessage.PROFILE_UPDATED);
     }
   }
 
@@ -57,7 +53,7 @@ public class UserProfileController {
       @RequestParam("file") MultipartFile file) {
     Long authenticatedUserId = getCurrentUserId();
     UploadImageResponse response = userProfileService.uploadKtp(authenticatedUserId, file);
-    return ResponseUtil.ok(response, "KTP image uploaded successfully");
+    return ResponseUtil.ok(response, ApiMessage.KTP_UPLOADED);
   }
 
   /**
@@ -68,21 +64,21 @@ public class UserProfileController {
   public ResponseEntity<ApiResponse<UserProfileDTO>> getMyProfile() {
     Long authenticatedUserId = getCurrentUserId();
     UserProfileDTO userProfile = userProfileService.getUserProfile(authenticatedUserId);
-    return ResponseUtil.ok(userProfile, "User profile retrieved successfully");
+    return ResponseUtil.ok(userProfile, ApiMessage.PROFILE_FETCHED);
   }
 
   /** Get all user profiles - ADMIN ONLY endpoint */
   @GetMapping
   public ResponseEntity<ApiResponse<List<UserProfileDTO>>> getAllUserProfiles() {
     List<UserProfileDTO> userProfiles = userProfileService.getAllUserProfiles();
-    return ResponseUtil.ok(userProfiles, "User profiles retrieved successfully");
+    return ResponseUtil.ok(userProfiles, ApiMessage.PROFILE_FETCHED);
   }
 
   /** Get user profile by ID - For Staff/Admin use */
   @GetMapping("/{userId}")
   public ResponseEntity<ApiResponse<UserProfileDTO>> getUserProfile(@PathVariable Long userId) {
     UserProfileDTO userProfile = userProfileService.getUserProfile(userId);
-    return ResponseUtil.ok(userProfile, "User profile retrieved successfully");
+    return ResponseUtil.ok(userProfile, ApiMessage.PROFILE_FETCHED);
   }
 
   /**
@@ -91,11 +87,11 @@ public class UserProfileController {
    */
   @PutMapping
   public ResponseEntity<ApiResponse<UserProfileDTO>> updateMyProfile(
-      @RequestBody UserProfileDTO dto) {
+      @Valid @RequestBody UserProfileDTO dto) {
     // SECURITY: Extract userId from JWT token, ignore any userId in request body
     Long authenticatedUserId = getCurrentUserId();
     UserProfileDTO updated = userProfileService.updateUserProfile(authenticatedUserId, dto);
-    return ResponseUtil.ok(updated, "User profile updated successfully");
+    return ResponseUtil.ok(updated, ApiMessage.PROFILE_UPDATED);
   }
 
   /**
@@ -106,22 +102,6 @@ public class UserProfileController {
   public ResponseEntity<ApiResponse<Void>> deleteMyProfile() {
     Long authenticatedUserId = getCurrentUserId();
     userProfileService.deleteUserProfile(authenticatedUserId);
-    return ResponseUtil.okMessage("User profile deleted successfully");
-  }
-
-  /** SECURITY: Extract user ID from JWT token to prevent IDOR vulnerabilities */
-  private Long getCurrentUserId() {
-    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-    if (authentication != null && authentication.getPrincipal() instanceof CustomUserDetails) {
-      CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-      return userDetails.getId();
-    }
-
-    // Fallback for testing - return first user
-    return userRepository.findAll().stream()
-        .findFirst()
-        .map(User::getId)
-        .orElseThrow(() -> new ResourceNotFoundException("No users found in the system"));
+    return ResponseUtil.okMessage(ApiMessage.PROFILE_DELETED);
   }
 }
