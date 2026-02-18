@@ -6,6 +6,7 @@ target/
 /src/main/resources/application.yml
 /src/main/resources/firebase-service-account.json
 uploads/
+documentation/
 
 ### STS ###
 .apt_generated
